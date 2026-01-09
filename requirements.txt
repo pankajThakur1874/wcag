@@ -1,0 +1,32 @@
+# Web framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.25.0
+pydantic>=2.5.0
+
+# Browser automation
+playwright>=1.40.0
+
+# Async HTTP
+aiohttp>=3.9.0
+httpx>=0.26.0
+
+# HTML parsing & validation
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+
+# Image processing (for contrast checking)
+Pillow>=10.2.0
+
+# Reporting
+jinja2>=3.1.2
+
+# Utilities
+python-dotenv>=1.0.0
+click>=8.1.0
+rich>=13.7.0
+
+# Data handling
+orjson>=3.9.0
+
+# CSS parsing (for contrast checker)
+cssutils>=2.9.0

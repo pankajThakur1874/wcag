@@ -1,0 +1,212 @@
+"""WCAG criteria mapper for violations."""
+
+from typing import Optional
+from src.models import Violation, WCAGLevel, WCAG_CRITERIA_LEVELS, ManualCheckItem
+
+
+# WCAG Success Criteria descriptions
+WCAG_CRITERIA_DESCRIPTIONS = {
+    "1.1.1": "Non-text Content",
+    "1.2.1": "Audio-only and Video-only (Prerecorded)",
+    "1.2.2": "Captions (Prerecorded)",
+    "1.2.3": "Audio Description or Media Alternative (Prerecorded)",
+    "1.2.4": "Captions (Live)",
+    "1.2.5": "Audio Description (Prerecorded)",
+    "1.2.6": "Sign Language (Prerecorded)",
+    "1.2.7": "Extended Audio Description (Prerecorded)",
+    "1.2.8": "Media Alternative (Prerecorded)",
+    "1.2.9": "Audio-only (Live)",
+    "1.3.1": "Info and Relationships",
+    "1.3.2": "Meaningful Sequence",
+    "1.3.3": "Sensory Characteristics",
+    "1.3.4": "Orientation",
+    "1.3.5": "Identify Input Purpose",
+    "1.3.6": "Identify Purpose",
+    "1.4.1": "Use of Color",
+    "1.4.2": "Audio Control",
+    "1.4.3": "Contrast (Minimum)",
+    "1.4.4": "Resize Text",
+    "1.4.5": "Images of Text",
+    "1.4.6": "Contrast (Enhanced)",
+    "1.4.7": "Low or No Background Audio",
+    "1.4.8": "Visual Presentation",
+    "1.4.9": "Images of Text (No Exception)",
+    "1.4.10": "Reflow",
+    "1.4.11": "Non-text Contrast",
+    "1.4.12": "Text Spacing",
+    "1.4.13": "Content on Hover or Focus",
+    "2.1.1": "Keyboard",
+    "2.1.2": "No Keyboard Trap",
+    "2.1.3": "Keyboard (No Exception)",
+    "2.1.4": "Character Key Shortcuts",
+    "2.2.1": "Timing Adjustable",
+    "2.2.2": "Pause, Stop, Hide",
+    "2.2.3": "No Timing",
+    "2.2.4": "Interruptions",
+    "2.2.5": "Re-authenticating",
+    "2.2.6": "Timeouts",
+    "2.3.1": "Three Flashes or Below Threshold",
+    "2.3.2": "Three Flashes",
+    "2.3.3": "Animation from Interactions",
+    "2.4.1": "Bypass Blocks",
+    "2.4.2": "Page Titled",
+    "2.4.3": "Focus Order",
+    "2.4.4": "Link Purpose (In Context)",
+    "2.4.5": "Multiple Ways",
+    "2.4.6": "Headings and Labels",
+    "2.4.7": "Focus Visible",
+    "2.4.8": "Location",
+    "2.4.9": "Link Purpose (Link Only)",
+    "2.4.10": "Section Headings",
+    "2.4.11": "Focus Not Obscured (Minimum)",
+    "2.4.12": "Focus Not Obscured (Enhanced)",
+    "2.4.13": "Focus Appearance",
+    "2.5.1": "Pointer Gestures",
+    "2.5.2": "Pointer Cancellation",
+    "2.5.3": "Label in Name",
+    "2.5.4": "Motion Actuation",
+    "2.5.5": "Target Size (Enhanced)",
+    "2.5.6": "Concurrent Input Mechanisms",
+    "2.5.7": "Dragging Movements",
+    "2.5.8": "Target Size (Minimum)",
+    "3.1.1": "Language of Page",
+    "3.1.2": "Language of Parts",
+    "3.1.3": "Unusual Words",
+    "3.1.4": "Abbreviations",
+    "3.1.5": "Reading Level",
+    "3.1.6": "Pronunciation",
+    "3.2.1": "On Focus",
+    "3.2.2": "On Input",
+    "3.2.3": "Consistent Navigation",
+    "3.2.4": "Consistent Identification",
+    "3.2.5": "Change on Request",
+    "3.2.6": "Consistent Help",
+    "3.3.1": "Error Identification",
+    "3.3.2": "Labels or Instructions",
+    "3.3.3": "Error Suggestion",
+    "3.3.4": "Error Prevention (Legal, Financial, Data)",
+    "3.3.5": "Help",
+    "3.3.6": "Error Prevention (All)",
+    "3.3.7": "Redundant Entry",
+    "3.3.8": "Accessible Authentication (Minimum)",
+    "3.3.9": "Accessible Authentication (Enhanced)",
+    "4.1.2": "Name, Role, Value",
+    "4.1.3": "Status Messages",
+}
+
+# Criteria that require manual testing
+MANUAL_TESTING_REQUIRED = {
+    "1.1.1": "Alt text quality requires human review to verify accuracy",
+    "1.2.1": "Audio/video content requires manual review",
+    "1.2.2": "Caption quality and accuracy requires manual review",
+    "1.2.3": "Audio description accuracy requires manual review",
+    "1.2.4": "Live caption quality requires manual review",
+    "1.2.5": "Audio description completeness requires manual review",
+    "1.3.2": "Meaningful sequence requires contextual understanding",
+    "1.3.3": "Sensory characteristics usage requires manual review",
+    "2.1.1": "Full keyboard accessibility requires manual testing",
+    "2.4.4": "Link purpose in context requires manual review",
+    "2.4.6": "Heading and label descriptiveness requires manual review",
+    "3.1.3": "Unusual word definitions require content review",
+    "3.1.4": "Abbreviation expansions require content review",
+    "3.1.5": "Reading level assessment requires content review",
+    "3.2.3": "Navigation consistency requires cross-page review",
+    "3.2.4": "Component identification consistency requires cross-page review",
+    "3.3.1": "Error message clarity requires manual review",
+    "3.3.3": "Error suggestion helpfulness requires manual review",
+}
+
+
+def get_criteria_description(criteria: str) -> str:
+    """Get the description for a WCAG criteria."""
+    return WCAG_CRITERIA_DESCRIPTIONS.get(criteria, f"WCAG {criteria}")
+
+
+def get_criteria_level(criteria: str) -> Optional[WCAGLevel]:
+    """Get the WCAG level for a criteria."""
+    return WCAG_CRITERIA_LEVELS.get(criteria)
+
+
+def get_manual_testing_items() -> list[ManualCheckItem]:
+    """Get list of items requiring manual testing."""
+    items = []
+    for criteria, reason in MANUAL_TESTING_REQUIRED.items():
+        items.append(ManualCheckItem(
+            criteria=criteria,
+            description=get_criteria_description(criteria),
+            reason=reason
+        ))
+    return items
+
+
+def group_violations_by_criteria(violations: list[Violation]) -> dict[str, list[Violation]]:
+    """Group violations by WCAG criteria."""
+    grouped: dict[str, list[Violation]] = {}
+
+    for violation in violations:
+        for criteria in violation.wcag_criteria:
+            if criteria not in grouped:
+                grouped[criteria] = []
+            grouped[criteria].append(violation)
+
+    return grouped
+
+
+def group_violations_by_level(violations: list[Violation]) -> dict[str, list[Violation]]:
+    """Group violations by WCAG level."""
+    grouped: dict[str, list[Violation]] = {"A": [], "AA": [], "AAA": [], "Unknown": []}
+
+    for violation in violations:
+        if violation.wcag_level:
+            grouped[violation.wcag_level.value].append(violation)
+        else:
+            grouped["Unknown"].append(violation)
+
+    return grouped
+
+
+def get_conformance_status(violations: list[Violation], level: str = "AA") -> dict:
+    """
+    Determine WCAG conformance status.
+
+    Args:
+        violations: List of violations
+        level: Target conformance level (A, AA, AAA)
+
+    Returns:
+        Dict with conformance status
+    """
+    level_violations = {
+        "A": [],
+        "AA": [],
+        "AAA": []
+    }
+
+    for violation in violations:
+        if violation.wcag_level:
+            level_violations[violation.wcag_level.value].append(violation)
+
+    # Determine conformance
+    if level == "A":
+        conforms = len(level_violations["A"]) == 0
+    elif level == "AA":
+        conforms = len(level_violations["A"]) == 0 and len(level_violations["AA"]) == 0
+    else:  # AAA
+        conforms = (
+            len(level_violations["A"]) == 0 and
+            len(level_violations["AA"]) == 0 and
+            len(level_violations["AAA"]) == 0
+        )
+
+    return {
+        "target_level": level,
+        "conforms": conforms,
+        "level_a_violations": len(level_violations["A"]),
+        "level_aa_violations": len(level_violations["AA"]),
+        "level_aaa_violations": len(level_violations["AAA"]),
+        "blocking_violations": (
+            level_violations["A"] +
+            (level_violations["AA"] if level in ["AA", "AAA"] else []) +
+            (level_violations["AAA"] if level == "AAA" else [])
+        )
+    }

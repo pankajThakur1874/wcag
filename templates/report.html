@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WCAG Accessibility Report - {{ report.scan_result.url }}</title>
+    <style>
+        :root {
+            --color-critical: #dc3545;
+            --color-serious: #fd7e14;
+            --color-moderate: #ffc107;
+            --color-minor: #28a745;
+            --color-pass: #28a745;
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+            color: var(--text-primary);
+            padding: 40px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .header .url {
+            color: var(--text-secondary);
+            word-break: break-all;
+            font-size: 1.1rem;
+        }
+
+        .header .meta {
+            margin-top: 15px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Score Card */
+        .score-section {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .score-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .score-card .score {
+            font-size: 4rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .score-card .score.excellent { color: var(--color-pass); }
+        .score-card .score.good { color: var(--color-moderate); }
+        .score-card .score.poor { color: var(--color-serious); }
+        .score-card .score.critical { color: var(--color-critical); }
+
+        .score-card .label {
+            color: #666;
+            margin-top: 10px;
+            font-size: 1.1rem;
+        }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border-left: 4px solid #ddd;
+        }
+
+        .summary-card.critical { border-color: var(--color-critical); }
+        .summary-card.serious { border-color: var(--color-serious); }
+        .summary-card.moderate { border-color: var(--color-moderate); }
+        .summary-card.minor { border-color: var(--color-minor); }
+        .summary-card.passes { border-color: var(--color-pass); }
+
+        .summary-card .value {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .summary-card.critical .value { color: var(--color-critical); }
+        .summary-card.serious .value { color: var(--color-serious); }
+        .summary-card.moderate .value { color: var(--color-moderate); }
+        .summary-card.minor .value { color: var(--color-minor); }
+        .summary-card.passes .value { color: var(--color-pass); }
+
+        .summary-card .label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* Sections */
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .section h2 {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        /* Violations */
+        .violation {
+            border-left: 4px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #fafafa;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .violation.critical { border-color: var(--color-critical); }
+        .violation.serious { border-color: var(--color-serious); }
+        .violation.moderate { border-color: var(--color-moderate); }
+        .violation.minor { border-color: var(--color-minor); }
+
+        .violation h3 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        .violation .meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .violation .tag {
+            font-size: 0.8rem;
+            padding: 3px 10px;
+            border-radius: 4px;
+            background: #e9ecef;
+        }
+
+        .violation .tag.impact {
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .violation.critical .tag.impact { background: var(--color-critical); }
+        .violation.serious .tag.impact { background: var(--color-serious); }
+        .violation.moderate .tag.impact { background: var(--color-moderate); color: #333; }
+        .violation.minor .tag.impact { background: var(--color-minor); }
+
+        .violation .help {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .violation .learn-more {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .violation .learn-more:hover {
+            text-decoration: underline;
+        }
+
+        .violation .instances {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+
+        .violation .instances h4 {
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .instance {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .instance code {
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #d63384;
+        }
+
+        .instance pre {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            margin: 10px 0;
+            border: 1px solid #e9ecef;
+        }
+
+        .instance .fix {
+            color: var(--color-pass);
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        /* Tools Section */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .tool-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tool-card .name {
+            font-weight: 600;
+        }
+
+        .tool-card .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .tool-card .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .tool-card .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .score-section {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header {
+                padding: 25px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .container {
+                max-width: none;
+            }
+
+            .header {
+                background: #333;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .section {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>WCAG Accessibility Report</h1>
+            <p class="url">{{ report.scan_result.url }}</p>
+            <div class="meta">
+                <span>Scanned: {{ report.scan_result.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}</span>
+                <span>Duration: {{ "%.1f"|format(report.scan_result.duration_seconds or 0) }}s</span>
+                <span>WCAG 2.2</span>
+            </div>
+        </header>
+
+        <div class="score-section">
+            <div class="score-card">
+                {% set score = report.scan_result.scores.overall %}
+                <div class="score {% if score >= 90 %}excellent{% elif score >= 70 %}good{% elif score >= 50 %}poor{% else %}critical{% endif %}">
+                    {{ score|int }}
+                </div>
+                <div class="label">Overall Score</div>
+            </div>
+
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="value">{{ report.scan_result.summary.total_violations }}</div>
+                    <div class="label">Total Violations</div>
+                </div>
+                <div class="summary-card critical">
+                    <div class="value">{{ report.scan_result.summary.by_impact.critical or 0 }}</div>
+                    <div class="label">Critical</div>
+                </div>
+                <div class="summary-card serious">
+                    <div class="value">{{ report.scan_result.summary.by_impact.serious or 0 }}</div>
+                    <div class="label">Serious</div>
+                </div>
+                <div class="summary-card moderate">
+                    <div class="value">{{ report.scan_result.summary.by_impact.moderate or 0 }}</div>
+                    <div class="label">Moderate</div>
+                </div>
+                <div class="summary-card minor">
+                    <div class="value">{{ report.scan_result.summary.by_impact.minor or 0 }}</div>
+                    <div class="label">Minor</div>
+                </div>
+                <div class="summary-card passes">
+                    <div class="value">{{ report.scan_result.summary.passes }}</div>
+                    <div class="label">Passes</div>
+                </div>
+            </div>
+        </div>
+
+        <section class="section">
+            <h2>Violations ({{ report.scan_result.summary.total_violations }})</h2>
+
+            {% if report.scan_result.violations %}
+                {% for violation in report.scan_result.violations %}
+                <div class="violation {{ violation.impact.value }}">
+                    <h3>{{ violation.description }}</h3>
+                    <div class="meta">
+                        <span class="tag impact">{{ violation.impact.value }}</span>
+                        {% if violation.wcag_criteria %}
+                        <span class="tag">WCAG: {{ violation.wcag_criteria|join(', ') }}</span>
+                        {% endif %}
+                        <span class="tag">{{ violation.detected_by|join(', ') }}</span>
+                    </div>
+
+                    {% if violation.help_text %}
+                    <p class="help">{{ violation.help_text }}</p>
+                    {% endif %}
+
+                    {% if violation.help_url %}
+                    <a href="{{ violation.help_url }}" target="_blank" class="learn-more">Learn more →</a>
+                    {% endif %}
+
+                    {% if violation.instances %}
+                    <div class="instances">
+                        <h4>Affected Elements ({{ violation.instances|length }})</h4>
+                        {% for instance in violation.instances[:5] %}
+                        <div class="instance">
+                            {% if instance.selector %}
+                            <code>{{ instance.selector }}</code>
+                            {% endif %}
+                            {% if instance.html %}
+                            <pre>{{ instance.html[:300] }}</pre>
+                            {% endif %}
+                            {% if instance.fix_suggestion %}
+                            <p class="fix">{{ instance.fix_suggestion }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        {% if violation.instances|length > 5 %}
+                        <p style="color: #666; font-style: italic;">
+                            ... and {{ violation.instances|length - 5 }} more instances
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="text-align: center; color: var(--color-pass); padding: 40px; font-size: 1.2rem;">
+                    ✓ No violations found!
+                </p>
+            {% endif %}
+        </section>
+
+        <section class="section">
+            <h2>Tools Used</h2>
+            <div class="tools-grid">
+                {% for name, status in report.scan_result.tools_used.items() %}
+                <div class="tool-card">
+                    <span class="name">{{ name }}</span>
+                    <span class="status {{ status.status }}">
+                        {{ status.status }}
+                        {% if status.duration_ms %} ({{ status.duration_ms }}ms){% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Manual Testing Required</h2>
+            <p style="color: #666; margin-bottom: 15px;">
+                The following WCAG criteria require manual testing for full compliance verification:
+            </p>
+            <ul style="padding-left: 20px;">
+                {% for item in report.wcag_coverage.manual_review_needed[:10] %}
+                <li style="margin-bottom: 8px;">
+                    <strong>{{ item.criteria }}</strong> - {{ item.description }}
+                    <br><span style="color: #888; font-size: 0.9rem;">{{ item.reason }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+
+        <footer class="footer">
+            <p>Generated by WCAG Accessibility Scanner v{{ report.metadata.scanner_version }}</p>
+            <p>Report generated: {{ report.metadata.generated_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+        </footer>
+    </div>
+</body>
+</html>

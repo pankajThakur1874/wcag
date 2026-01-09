@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WCAG Accessibility Report - https://www.ascendons.in/</title>
+    <style>
+        :root {
+            --color-critical: #dc3545;
+            --color-serious: #fd7e14;
+            --color-moderate: #ffc107;
+            --color-minor: #28a745;
+            --color-pass: #28a745;
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+            color: var(--text-primary);
+            padding: 40px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .header .url {
+            color: var(--text-secondary);
+            word-break: break-all;
+            font-size: 1.1rem;
+        }
+
+        .header .meta {
+            margin-top: 15px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Score Card */
+        .score-section {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .score-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .score-card .score {
+            font-size: 4rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .score-card .score.excellent { color: var(--color-pass); }
+        .score-card .score.good { color: var(--color-moderate); }
+        .score-card .score.poor { color: var(--color-serious); }
+        .score-card .score.critical { color: var(--color-critical); }
+
+        .score-card .label {
+            color: #666;
+            margin-top: 10px;
+            font-size: 1.1rem;
+        }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border-left: 4px solid #ddd;
+        }
+
+        .summary-card.critical { border-color: var(--color-critical); }
+        .summary-card.serious { border-color: var(--color-serious); }
+        .summary-card.moderate { border-color: var(--color-moderate); }
+        .summary-card.minor { border-color: var(--color-minor); }
+        .summary-card.passes { border-color: var(--color-pass); }
+
+        .summary-card .value {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .summary-card.critical .value { color: var(--color-critical); }
+        .summary-card.serious .value { color: var(--color-serious); }
+        .summary-card.moderate .value { color: var(--color-moderate); }
+        .summary-card.minor .value { color: var(--color-minor); }
+        .summary-card.passes .value { color: var(--color-pass); }
+
+        .summary-card .label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* Sections */
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .section h2 {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        /* Violations */
+        .violation {
+            border-left: 4px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #fafafa;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .violation.critical { border-color: var(--color-critical); }
+        .violation.serious { border-color: var(--color-serious); }
+        .violation.moderate { border-color: var(--color-moderate); }
+        .violation.minor { border-color: var(--color-minor); }
+
+        .violation h3 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        .violation .meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .violation .tag {
+            font-size: 0.8rem;
+            padding: 3px 10px;
+            border-radius: 4px;
+            background: #e9ecef;
+        }
+
+        .violation .tag.impact {
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .violation.critical .tag.impact { background: var(--color-critical); }
+        .violation.serious .tag.impact { background: var(--color-serious); }
+        .violation.moderate .tag.impact { background: var(--color-moderate); color: #333; }
+        .violation.minor .tag.impact { background: var(--color-minor); }
+
+        .violation .help {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .violation .learn-more {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .violation .learn-more:hover {
+            text-decoration: underline;
+        }
+
+        .violation .instances {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+
+        .violation .instances h4 {
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .instance {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .instance code {
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #d63384;
+        }
+
+        .instance pre {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            margin: 10px 0;
+            border: 1px solid #e9ecef;
+        }
+
+        .instance .fix {
+            color: var(--color-pass);
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        /* Tools Section */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .tool-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tool-card .name {
+            font-weight: 600;
+        }
+
+        .tool-card .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .tool-card .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .tool-card .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .score-section {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header {
+                padding: 25px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .container {
+                max-width: none;
+            }
+
+            .header {
+                background: #333;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .section {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>WCAG Accessibility Report</h1>
+            <p class="url">https://www.ascendons.in/</p>
+            <div class="meta">
+                <span>Scanned: 2026-01-09 04:01 UTC</span>
+                <span>Duration: 2.3s</span>
+                <span>WCAG 2.2</span>
+            </div>
+        </header>
+
+        <div class="score-section">
+            <div class="score-card">
+                
+                <div class="score critical">
+                    0
+                </div>
+                <div class="label">Overall Score</div>
+            </div>
+
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="value">26</div>
+                    <div class="label">Total Violations</div>
+                </div>
+                <div class="summary-card critical">
+                    <div class="value">2</div>
+                    <div class="label">Critical</div>
+                </div>
+                <div class="summary-card serious">
+                    <div class="value">20</div>
+                    <div class="label">Serious</div>
+                </div>
+                <div class="summary-card moderate">
+                    <div class="value">4</div>
+                    <div class="label">Moderate</div>
+                </div>
+                <div class="summary-card minor">
+                    <div class="value">0</div>
+                    <div class="label">Minor</div>
+                </div>
+                <div class="summary-card passes">
+                    <div class="value">0</div>
+                    <div class="label">Passes</div>
+                </div>
+            </div>
+        </div>
+
+        <section class="section">
+            <h2>Violations (26)</h2>
+
+            
+                
+                <div class="violation critical">
+                    <h3>Ensures an element&#39;s role supports its ARIA attributes</h3>
+                    <div class="meta">
+                        <span class="tag impact">critical</span>
+                        
+                        <span class="tag">WCAG: 4.1.2</span>
+                        
+                        <span class="tag">axe</span>
+                    </div>
+
+                    
+                    <p class="help">Elements must only use supported ARIA attributes</p>
+                    
+
+                    
+                    <a href="https://dequeuniversity.com/rules/axe/4.8/aria-allowed-attr?application=axeAPI" target="_blank" class="learn-more">Learn more →</a>
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (3)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>.active</code>
+                            
+                            
+                            <pre>&lt;button class=&#34;dot active&#34; aria-selected=&#34;true&#34; aria-label=&#34;Show testimonial 1&#34;&gt;&lt;/button&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix all of the following:
+  ARIA attribute is not allowed: aria-selected=&#34;true&#34;</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>button[aria-label=&#34;Show testimonial 2&#34;]</code>
+                            
+                            
+                            <pre>&lt;button class=&#34;dot &#34; aria-selected=&#34;false&#34; aria-label=&#34;Show testimonial 2&#34;&gt;&lt;/button&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix all of the following:
+  ARIA attribute is not allowed: aria-selected=&#34;false&#34;</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>button[aria-label=&#34;Show testimonial 3&#34;]</code>
+                            
+                            
+                            <pre>&lt;button class=&#34;dot &#34; aria-selected=&#34;false&#34; aria-label=&#34;Show testimonial 3&#34;&gt;&lt;/button&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix all of the following:
+  ARIA attribute is not allowed: aria-selected=&#34;false&#34;</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Ensures every ARIA dialog and alertdialog node has an accessible name</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">axe</span>
+                    </div>
+
+                    
+                    <p class="help">ARIA dialog and alertdialog nodes should have an accessible name</p>
+                    
+
+                    
+                    <a href="https://dequeuniversity.com/rules/axe/4.8/aria-dialog-name?application=axeAPI" target="_blank" class="learn-more">Learn more →</a>
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>.privacy-banner</code>
+                            
+                            
+                            <pre>&lt;div class=&#34;privacy-banner&#34; role=&#34;dialog&#34; aria-live=&#34;polite&#34;&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  aria-label attribute does not exist or is empty
+  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty
+  Element has no title attribute</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation critical">
+                    <h3>Ensures elements with an ARIA role that require child roles contain them</h3>
+                    <div class="meta">
+                        <span class="tag impact">critical</span>
+                        
+                        <span class="tag">WCAG: 1.3.1</span>
+                        
+                        <span class="tag">axe</span>
+                    </div>
+
+                    
+                    <p class="help">Certain ARIA roles must contain particular children</p>
+                    
+
+                    
+                    <a href="https://dequeuniversity.com/rules/axe/4.8/aria-required-children?application=axeAPI" target="_blank" class="learn-more">Learn more →</a>
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>.dots</code>
+                            
+                            
+                            <pre>&lt;div class=&#34;dots&#34; role=&#34;tablist&#34; aria-label=&#34;Testimonial pages&#34;&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Element has children which are not allowed: button[aria-label]
+  Element uses aria-busy=&#34;true&#34; while showing a loader</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Ensures the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">axe</span>
+                    </div>
+
+                    
+                    <p class="help">Elements must meet minimum color contrast ratio thresholds</p>
+                    
+
+                    
+                    <a href="https://dequeuniversity.com/rules/axe/4.8/color-contrast?application=axeAPI" target="_blank" class="learn-more">Learn more →</a>
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (16)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>.span1</code>
+                            
+                            
+                            <pre>&lt;span class=&#34;span1&#34;&gt; UI/UX, Backend, Web designers &lt;/span&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Element has insufficient color contrast of 1.75 (foreground color: #efac78, background color: #fdf2ea, font size: 30.0pt (40px), font weight: bold). Expected contrast ratio of 3:1</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>.text-section:nth-child(4) &gt; .home-paragraph &gt; .subpart1</code>
+                            
+                            
+                            <pre>&lt;p class=&#34;subpart1 &#34;&gt;WHAT WE OFFER&lt;/p&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Element has insufficient color contrast of 1.6 (foreground color: #cccccc, background color: #ffffff, font size: 11.3pt (15px), font weight: normal). Expected contrast ratio of 4.5:1</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>.home-button</code>
+                            
+                            
+                            <pre>&lt;a class=&#34;home-button &#34; href=&#34;/contact&#34; data-discover=&#34;true&#34;&gt;Get Started Today&lt;/a&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Element has insufficient color contrast of 2.27 (foreground color: #ee76ad, background color: #fce7f1, font size: 14.4pt (19.2px), font weight: normal). Expected contrast ratio of 4.5:1</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>.services-section:nth-child(5) &gt; .service-card:nth-child(1) &gt; .para</code>
+                            
+                            
+                            <pre>&lt;p class=&#34;para&#34;&gt;We craft tailored strategies to align with your business goals, ensuring your digital solutions drive growth and success. From market research to product roadmaps, we’ve got you covered.&lt;/p&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Element has insufficient color contrast of 2.74 (foreground color: #9c9c9c, background color: #ffffff, font size: 13.5pt (18px), font weight: normal). Expected contrast ratio of 4.5:1</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>.service-card:nth-child(1) &gt; .learn-more-button</code>
+                            
+                            
+                            <pre>&lt;button class=&#34;learn-more-button&#34;&gt;Learn More&lt;/button&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Element has insufficient color contrast of 2.29 (foreground color: #00bcd4, background color: #ffffff, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1</p>
+                            
+                        </div>
+                        
+                        
+                        <p style="color: #666; font-style: italic;">
+                            ... and 11 more instances
+                        </p>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Ensures links have discernible text</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 2.4.4, 4.1.2</span>
+                        
+                        <span class="tag">axe</span>
+                    </div>
+
+                    
+                    <p class="help">Links must have discernible text</p>
+                    
+
+                    
+                    <a href="https://dequeuniversity.com/rules/axe/4.8/link-name?application=axeAPI" target="_blank" class="learn-more">Learn more →</a>
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (3)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>.bg-\[\#4b3d0f\].p-2.rounded-full:nth-child(1)</code>
+                            
+                            
+                            <pre>&lt;a href=&#34;https://www.linkedin.com/company/ascendons1/&#34; class=&#34;bg-[#4b3d0f] p-2 rounded-full hover:bg-[#3a2f0c]&#34;&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix all of the following:
+  Element is in tab order and does not have accessible text
+
+Fix any of the following:
+  Element does not have text that is visible to screen readers
+  aria-label attribute does not exist or is empty
+  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty
+  Element has no title attribute</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>.bg-\[\#4b3d0f\].p-2.rounded-full:nth-child(2)</code>
+                            
+                            
+                            <pre>&lt;a href=&#34;#&#34; class=&#34;bg-[#4b3d0f] p-2 rounded-full hover:bg-[#3a2f0c]&#34;&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix all of the following:
+  Element is in tab order and does not have accessible text
+
+Fix any of the following:
+  Element does not have text that is visible to screen readers
+  aria-label attribute does not exist or is empty
+  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty
+  Element has no title attribute</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>.bg-\[\#4b3d0f\].p-2.rounded-full:nth-child(3)</code>
+                            
+                            
+                            <pre>&lt;a href=&#34;https://www.instagram.com/ascendonstech/#&#34; class=&#34;bg-[#4b3d0f] p-2 rounded-full hover:bg-[#3a2f0c]&#34;&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix all of the following:
+  Element is in tab order and does not have accessible text
+
+Fix any of the following:
+  Element does not have text that is visible to screen readers
+  aria-label attribute does not exist or is empty
+  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty
+  Element has no title attribute</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation moderate">
+                    <h3>Ensures all page content is contained by landmarks</h3>
+                    <div class="meta">
+                        <span class="tag impact">moderate</span>
+                        
+                        <span class="tag">axe</span>
+                    </div>
+
+                    
+                    <p class="help">All page content should be contained by landmarks</p>
+                    
+
+                    
+                    <a href="https://dequeuniversity.com/rules/axe/4.8/region?application=axeAPI" target="_blank" class="learn-more">Learn more →</a>
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (17)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>.home-section</code>
+                            
+                            
+                            <pre>&lt;section class=&#34;home-section&#34;&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Some page content is not contained by landmarks</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>.text-section:nth-child(3)</code>
+                            
+                            
+                            <pre>&lt;div class=&#34;text-section&#34;&gt;&lt;p class=&#34;home-paragraph &#34;&gt;&lt;span class=&#34;span1&#34;&gt; UI/UX, Backend, Web designers &lt;/span&gt; with more than 5 years of experience in designing, developing and deploying web applications, websites and mobile apps.&lt;/p&gt;&lt;/div&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Some page content is not contained by landmarks</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>.text-section:nth-child(4)</code>
+                            
+                            
+                            <pre>&lt;div class=&#34;text-section&#34;&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Some page content is not contained by landmarks</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>.services-section:nth-child(5) &gt; .service-card:nth-child(1) &gt; .headi</code>
+                            
+                            
+                            <pre>&lt;span class=&#34;headi&#34;&gt;Strategy&lt;/span&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Some page content is not contained by landmarks</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>.services-section:nth-child(5) &gt; .service-card:nth-child(1) &gt; .para</code>
+                            
+                            
+                            <pre>&lt;p class=&#34;para&#34;&gt;We craft tailored strategies to align with your business goals, ensuring your digital solutions drive growth and success. From market research to product roadmaps, we’ve got you covered.&lt;/p&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Some page content is not contained by landmarks</p>
+                            
+                        </div>
+                        
+                        
+                        <p style="color: #666; font-style: italic;">
+                            ... and 12 more instances
+                        </p>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Ensure touch target have sufficient size and space</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 2.5.8</span>
+                        
+                        <span class="tag">axe</span>
+                    </div>
+
+                    
+                    <p class="help">All touch targets must be 24px large, or leave sufficient space</p>
+                    
+
+                    
+                    <a href="https://dequeuniversity.com/rules/axe/4.8/target-size?application=axeAPI" target="_blank" class="learn-more">Learn more →</a>
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (3)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>.active</code>
+                            
+                            
+                            <pre>&lt;button class=&#34;dot active&#34; aria-selected=&#34;true&#34; aria-label=&#34;Show testimonial 1&#34;&gt;&lt;/button&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Target has insufficient size (10px by 10px, should be at least 24px by 24px)
+  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 12px instead of at least 24px.</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>button[aria-label=&#34;Show testimonial 2&#34;]</code>
+                            
+                            
+                            <pre>&lt;button class=&#34;dot &#34; aria-selected=&#34;false&#34; aria-label=&#34;Show testimonial 2&#34;&gt;&lt;/button&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Target has insufficient size (10px by 10px, should be at least 24px by 24px)
+  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 12px instead of at least 24px.</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>button[aria-label=&#34;Show testimonial 3&#34;]</code>
+                            
+                            
+                            <pre>&lt;button class=&#34;dot &#34; aria-selected=&#34;false&#34; aria-label=&#34;Show testimonial 3&#34;&gt;&lt;/button&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Target has insufficient size (10px by 10px, should be at least 24px by 24px)
+  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 12px instead of at least 24px.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation moderate">
+                    <h3>Page should have an &lt;h1&gt; heading</h3>
+                    <div class="meta">
+                        <span class="tag impact">moderate</span>
+                        
+                        <span class="tag">WCAG: 1.3.1</span>
+                        
+                        <span class="tag">html_validator</span>
+                    </div>
+
+                    
+                    <p class="help">Add an &lt;h1&gt; element as the main heading of the page.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>body</code>
+                            
+                            
+                            
+                            <p class="fix">Add an &lt;h1&gt; element as the primary heading</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Links must have discernible text</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 2.4.4, 4.1.2</span>
+                        
+                        <span class="tag">html_validator</span>
+                    </div>
+
+                    
+                    <p class="help">Add text content, aria-label, or an image with alt text to the link.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>a.bg-[#4b3d0f].p-2</code>
+                            
+                            
+                            <pre>&lt;a class=&#34;bg-[#4b3d0f] p-2 rounded-full hover:bg-[#3a2f0c]&#34; href=&#34;https://www.linkedin.com/company/ascendons1/&#34;&gt;&lt;svg fill=&#34;currentColor&#34; height=&#34;1em&#34; stroke=&#34;currentColor&#34; stroke-width=&#34;0&#34; viewbox=&#34;0 </pre>
+                            
+                            
+                            <p class="fix">Add descriptive text inside the link or use aria-label</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation moderate">
+                    <h3>Page should have a &lt;main&gt; landmark</h3>
+                    <div class="meta">
+                        <span class="tag impact">moderate</span>
+                        
+                        <span class="tag">WCAG: 1.3.1</span>
+                        
+                        <span class="tag">html_validator</span>
+                    </div>
+
+                    
+                    <p class="help">Add a &lt;main&gt; element to contain the primary content.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>body</code>
+                            
+                            
+                            
+                            <p class="fix">Wrap main content in &lt;main&gt; element</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation moderate">
+                    <h3>Page should have a skip navigation link</h3>
+                    <div class="meta">
+                        <span class="tag impact">moderate</span>
+                        
+                        <span class="tag">WCAG: 2.4.1</span>
+                        
+                        <span class="tag">html_validator</span>
+                    </div>
+
+                    
+                    <p class="help">Add a &#39;Skip to main content&#39; link as the first focusable element.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>body &gt; a:first-of-type</code>
+                            
+                            
+                            
+                            <p class="fix">Add &lt;a href=&#39;#main-content&#39;&gt;Skip to main content&lt;/a&gt; at the start of the page</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 1.00:1 is below WCAG AA requirement of 3.0:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgb(255, 255, 255), Background: rgb(255, 255, 255). Increase contrast to at least 3.0:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>a.logo-link</code>
+                            
+                            
+                            <pre>&lt;a class=&#34;logo-link&#34; href=&#34;/&#34; data-discover=&#34;true&#34;&gt;&lt;img alt=&#34;Company Logo&#34; class=&#34;logo-image&#34; src=&#34;/assets/ascendons-DS92G99K.png&#34;&gt;&lt;span class=&#34;logo-text&#34;&gt;ASCENDONS&lt;/span&gt;&lt;/a&gt;</pre>
+                            
+                            
+                            <p class="fix">Current ratio: 1.00:1. Need at least 3.0:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 1.00:1 is below WCAG AA requirement of 3.0:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgb(255, 255, 255), Background: rgb(255, 255, 255). Increase contrast to at least 3.0:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>span.logo-text</code>
+                            
+                            
+                            <pre>&lt;span class=&#34;logo-text&#34;&gt;ASCENDONS&lt;/span&gt;</pre>
+                            
+                            
+                            <p class="fix">Current ratio: 1.00:1. Need at least 3.0:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 1.00:1 is below WCAG AA requirement of 4.5:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgb(255, 255, 255), Background: rgb(255, 255, 255). Increase contrast to at least 4.5:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>a.desktop-link</code>
+                            
+                            
+                            <pre>&lt;a class=&#34;desktop-link&#34; href=&#34;/&#34; data-discover=&#34;true&#34;&gt;Home&lt;/a&gt;</pre>
+                            
+                            
+                            <p class="fix">Current ratio: 1.00:1. Need at least 4.5:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 1.00:1 is below WCAG AA requirement of 3.0:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgba(255, 255, 255, 0.9), Background: rgb(255, 255, 255). Increase contrast to at least 3.0:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>span.styles-module_blinkingCursor__yugAC</code>
+                            
+                            
+                            <pre>&lt;span class=&#34;styles-module_blinkingCursor__yugAC styles-module_blinking__9VXRT&#34; style=&#34;color: inherit;&#34;&gt;|&lt;/span&gt;</pre>
+                            
+                            
+                            <p class="fix">Current ratio: 1.00:1. Need at least 3.0:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 1.00:1 is below WCAG AA requirement of 4.5:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgb(255, 255, 255), Background: rgb(255, 255, 255). Increase contrast to at least 4.5:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>a.home-butto</code>
+                            
+                            
+                            <pre>&lt;a class=&#34;home-butto&#34; href=&#34;/contact&#34; data-discover=&#34;true&#34;&gt;Get in touch&lt;/a&gt;</pre>
+                            
+                            
+                            <p class="fix">Current ratio: 1.00:1. Need at least 4.5:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 1.76:1 is below WCAG AA requirement of 3.0:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgb(239, 172, 120), Background: rgb(253, 242, 234). Increase contrast to at least 3.0:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>span.span1</code>
+                            
+                            
+                            <pre>&lt;span class=&#34;span1&#34;&gt; UI/UX, Backend, Web designers &lt;/span&gt;</pre>
+                            
+                            
+                            <p class="fix">Current ratio: 1.76:1. Need at least 3.0:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 3.38:1 is below WCAG AA requirement of 4.5:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgb(139, 139, 146), Background: rgb(255, 255, 255). Increase contrast to at least 4.5:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>p.subpart3</code>
+                            
+                            
+                            <pre>&lt;p class=&#34;subpart3 &#34;&gt;At Ascendons, we specialize in transforming your ideas into innovative digital solutions. Whether you need a stunning website, a high-performance mobile app, or a custom software </pre>
+                            
+                            
+                            <p class="fix">Current ratio: 3.38:1. Need at least 4.5:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 2.28:1 is below WCAG AA requirement of 4.5:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgb(238, 118, 173), Background: rgb(252, 231, 241). Increase contrast to at least 4.5:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>a.home-button</code>
+                            
+                            
+                            <pre>&lt;a class=&#34;home-button &#34; href=&#34;/contact&#34; data-discover=&#34;true&#34;&gt;Get Started Today&lt;/a&gt;</pre>
+                            
+                            
+                            <p class="fix">Current ratio: 2.28:1. Need at least 4.5:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 2.75:1 is below WCAG AA requirement of 4.5:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgb(156, 156, 156), Background: rgb(255, 255, 255). Increase contrast to at least 4.5:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>p.para</code>
+                            
+                            
+                            <pre>&lt;p class=&#34;para&#34;&gt;We craft tailored strategies to align with your business goals, ensuring your digital solutions drive growth and success. From market research to product roadmaps, we’ve got you covere</pre>
+                            
+                            
+                            <p class="fix">Current ratio: 2.75:1. Need at least 4.5:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 2.30:1 is below WCAG AA requirement of 4.5:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgb(0, 188, 212), Background: rgb(255, 255, 255). Increase contrast to at least 4.5:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>button.learn-more-button</code>
+                            
+                            
+                            <pre>&lt;button class=&#34;learn-more-button&#34;&gt;Learn More&lt;/button&gt;</pre>
+                            
+                            
+                            <p class="fix">Current ratio: 2.30:1. Need at least 4.5:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 2.27:1 is below WCAG AA requirement of 3.0:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgb(255, 255, 255), Background: rgb(41, 186, 228). Increase contrast to at least 3.0:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>h2</code>
+                            
+                            
+                            <pre>&lt;h2&gt;Our Journey at ASCENDONS&lt;/h2&gt;</pre>
+                            
+                            
+                            <p class="fix">Current ratio: 2.27:1. Need at least 3.0:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 2.27:1 is below WCAG AA requirement of 4.5:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgb(255, 255, 255), Background: rgb(41, 186, 228). Increase contrast to at least 4.5:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>p</code>
+                            
+                            
+                            <pre>&lt;p&gt;At Ascendons, we believe in pushing boundaries and achieving the extraordinary. From empowering businesses to delighting customers, our journey is defined by innovation, dedication, and results. He</pre>
+                            
+                            
+                            <p class="fix">Current ratio: 2.27:1. Need at least 4.5:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 2.04:1 is below WCAG AA requirement of 3.0:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgb(255, 255, 255), Background: rgb(59, 196, 234). Increase contrast to at least 3.0:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>h3</code>
+                            
+                            
+                            <pre>&lt;h3&gt;15&lt;/h3&gt;</pre>
+                            
+                            
+                            <p class="fix">Current ratio: 2.04:1. Need at least 3.0:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 2.04:1 is below WCAG AA requirement of 4.5:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgb(255, 255, 255), Background: rgb(59, 196, 234). Increase contrast to at least 4.5:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>span</code>
+                            
+                            
+                            <pre>&lt;span&gt;Our clients are at the heart of everything we do. Their success is our greatest achievement.&lt;/span&gt;</pre>
+                            
+                            
+                            <p class="fix">Current ratio: 2.04:1. Need at least 4.5:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>Color contrast ratio 3.55:1 is below WCAG AA requirement of 4.5:1</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4.3</span>
+                        
+                        <span class="tag">contrast</span>
+                    </div>
+
+                    
+                    <p class="help">Foreground: rgb(255, 255, 255), Background: rgb(29, 157, 48). Increase contrast to at least 4.5:1.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>a.join-journey-button</code>
+                            
+                            
+                            <pre>&lt;a class=&#34;join-journey-button &#34; href=&#34;/contact&#34; data-discover=&#34;true&#34;&gt;Join the Ascendons Journey&lt;/a&gt;</pre>
+                            
+                            
+                            <p class="fix">Current ratio: 3.55:1. Need at least 4.5:1 for AA compliance.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+            
+        </section>
+
+        <section class="section">
+            <h2>Tools Used</h2>
+            <div class="tools-grid">
+                
+                <div class="tool-card">
+                    <span class="name">axe</span>
+                    <span class="status success">
+                        success
+                         (1981ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">html_validator</span>
+                    <span class="status success">
+                        success
+                         (1482ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">contrast</span>
+                    <span class="status success">
+                        success
+                         (1481ms)
+                    </span>
+                </div>
+                
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Manual Testing Required</h2>
+            <p style="color: #666; margin-bottom: 15px;">
+                The following WCAG criteria require manual testing for full compliance verification:
+            </p>
+            <ul style="padding-left: 20px;">
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.1.1</strong> - Non-text Content
+                    <br><span style="color: #888; font-size: 0.9rem;">Alt text quality requires human review to verify accuracy</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.2.1</strong> - Audio-only and Video-only (Prerecorded)
+                    <br><span style="color: #888; font-size: 0.9rem;">Audio/video content requires manual review</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.2.2</strong> - Captions (Prerecorded)
+                    <br><span style="color: #888; font-size: 0.9rem;">Caption quality and accuracy requires manual review</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.2.3</strong> - Audio Description or Media Alternative (Prerecorded)
+                    <br><span style="color: #888; font-size: 0.9rem;">Audio description accuracy requires manual review</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.2.4</strong> - Captions (Live)
+                    <br><span style="color: #888; font-size: 0.9rem;">Live caption quality requires manual review</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.2.5</strong> - Audio Description (Prerecorded)
+                    <br><span style="color: #888; font-size: 0.9rem;">Audio description completeness requires manual review</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.3.2</strong> - Meaningful Sequence
+                    <br><span style="color: #888; font-size: 0.9rem;">Meaningful sequence requires contextual understanding</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.3.3</strong> - Sensory Characteristics
+                    <br><span style="color: #888; font-size: 0.9rem;">Sensory characteristics usage requires manual review</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>2.1.1</strong> - Keyboard
+                    <br><span style="color: #888; font-size: 0.9rem;">Full keyboard accessibility requires manual testing</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>2.4.4</strong> - Link Purpose (In Context)
+                    <br><span style="color: #888; font-size: 0.9rem;">Link purpose in context requires manual review</span>
+                </li>
+                
+            </ul>
+        </section>
+
+        <footer class="footer">
+            <p>Generated by WCAG Accessibility Scanner v1.0.0</p>
+            <p>Report generated: 2026-01-09 04:01 UTC</p>
+        </footer>
+    </div>
+</body>
+</html>
