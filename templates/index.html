@@ -531,6 +531,72 @@
             color: var(--gray-600);
         }
 
+        .violation-instances {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--gray-200);
+            display: none;
+        }
+
+        .violation-instances.expanded {
+            display: block;
+        }
+
+        .instance-item {
+            background: white;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+
+        .instance-selector {
+            font-family: monospace;
+            color: var(--primary);
+            word-break: break-all;
+        }
+
+        .instance-html {
+            background: var(--gray-100);
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 6px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .instance-fix {
+            margin-top: 6px;
+            color: var(--success);
+            font-size: 0.8rem;
+        }
+
+        .expand-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 4px 8px;
+            margin-top: 8px;
+        }
+
+        .expand-btn:hover {
+            text-decoration: underline;
+        }
+
+        .instance-count {
+            background: var(--gray-200);
+            color: var(--gray-700);
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
         .new-scan-btn {
             display: block;
             width: 100%;
@@ -788,7 +854,7 @@
 
                 <div class="violations-list" id="violationsList">
                     <div class="violations-header">
-                        <h3>Violations (<span id="totalViolations">0</span>)</h3>
+                        <h3>Issues (<span id="totalViolations">0</span> types, <span id="totalInstances">0</span> elements)</h3>
                     </div>
                     <div id="violationsContainer"></div>
                 </div>
@@ -973,6 +1039,7 @@
             document.getElementById('moderateCount').textContent = impact.moderate || 0;
             document.getElementById('minorCount').textContent = impact.minor || 0;
             document.getElementById('totalViolations').textContent = data.summary.total_violations;
+            document.getElementById('totalInstances').textContent = data.summary.total_instances || 0;
 
             // Update tools used with scores
             const toolsGrid = document.getElementById('toolsGrid');
@@ -993,18 +1060,38 @@
             const container = document.getElementById('violationsContainer');
             container.innerHTML = '';
 
-            data.violations.slice(0, 50).forEach(violation => {
+            data.violations.slice(0, 50).forEach((violation, index) => {
                 const item = document.createElement('div');
                 item.className = `violation-item ${violation.impact}`;
+
+                const instanceCount = violation.instances.length;
+                const instancesHtml = violation.instances.slice(0, 10).map(inst => `
+                    <div class="instance-item">
+                        <div class="instance-selector">${escapeHtml(inst.selector)}</div>
+                        ${inst.html ? `<div class="instance-html">${escapeHtml(inst.html.substring(0, 200))}</div>` : ''}
+                        ${inst.fix_suggestion ? `<div class="instance-fix">Fix: ${escapeHtml(inst.fix_suggestion)}</div>` : ''}
+                    </div>
+                `).join('');
+
+                const moreInstances = instanceCount > 10 ? `<p style="text-align:center;color:#666;font-size:0.85rem;">... and ${instanceCount - 10} more instances</p>` : '';
+
                 item.innerHTML = `
                     <div class="violation-header">
-                        <span class="violation-title">${escapeHtml(violation.description)}</span>
+                        <span class="violation-title">
+                            ${escapeHtml(violation.description)}
+                            <span class="instance-count">${instanceCount} element${instanceCount !== 1 ? 's' : ''}</span>
+                        </span>
                         <span class="violation-badge ${violation.impact}">${violation.impact}</span>
                     </div>
                     <div class="violation-meta">
                         <span>WCAG: ${violation.wcag_criteria.join(', ') || 'N/A'}</span>
                         <span>Detected by: ${violation.detected_by.join(', ')}</span>
-                        <span>Instances: ${violation.instances.length}</span>
+                    </div>
+                    ${violation.help_text ? `<p style="margin-top:8px;font-size:0.85rem;color:var(--gray-600);">${escapeHtml(violation.help_text)}</p>` : ''}
+                    <button class="expand-btn" onclick="toggleInstances(${index})">Show affected elements</button>
+                    <div class="violation-instances" id="instances-${index}">
+                        ${instancesHtml}
+                        ${moreInstances}
                     </div>
                 `;
                 container.appendChild(item);
@@ -1015,8 +1102,20 @@
                 more.style.textAlign = 'center';
                 more.style.color = '#666';
                 more.style.marginTop = '20px';
-                more.textContent = `... and ${data.violations.length - 50} more violations. Download the full report to see all.`;
+                more.textContent = `... and ${data.violations.length - 50} more issue types. Download the full report to see all.`;
                 container.appendChild(more);
+            }
+        }
+
+        function toggleInstances(index) {
+            const instances = document.getElementById(`instances-${index}`);
+            const btn = instances.previousElementSibling;
+            if (instances.classList.contains('expanded')) {
+                instances.classList.remove('expanded');
+                btn.textContent = 'Show affected elements';
+            } else {
+                instances.classList.add('expanded');
+                btn.textContent = 'Hide affected elements';
             }
         }
 

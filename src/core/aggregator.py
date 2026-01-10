@@ -188,29 +188,26 @@ class ResultsAggregator:
 
     def _deduplicate_violations(self, violations: list[Violation]) -> list[Violation]:
         """
-        Deduplicate violations from multiple tools.
+        Group violations by rule_id and collect all instances under each.
 
-        Violations are considered duplicates if they have the same rule_id
-        or affect the same element with similar descriptions.
+        This creates a cleaner structure where each unique issue type
+        is listed once with all affected elements as sub-instances.
         """
-        unique_violations: dict[str, Violation] = {}
+        grouped_violations: dict[str, Violation] = {}
 
         for violation in violations:
-            # Create a key based on rule_id and first instance selector
-            first_selector = ""
-            if violation.instances:
-                first_selector = violation.instances[0].selector
-
-            # Normalize rule_id for comparison
+            # Normalize rule_id for grouping
             normalized_rule = violation.rule_id.lower().replace("-", "_").replace(" ", "_")
 
-            # Create compound key
-            key = f"{normalized_rule}:{first_selector}"
-
-            if key in unique_violations:
+            if normalized_rule in grouped_violations:
                 # Merge with existing violation
-                existing = unique_violations[key]
-                existing.add_detected_by(violation.detected_by[0] if violation.detected_by else "unknown")
+                existing = grouped_violations[normalized_rule]
+
+                # Add all detected_by tools
+                for tool in violation.detected_by:
+                    existing.add_detected_by(tool)
+
+                # Merge all instances (avoiding duplicates by selector)
                 existing.merge_instances(violation)
 
                 # Upgrade impact if new one is more severe
@@ -223,10 +220,34 @@ class ResultsAggregator:
                     if criteria not in existing.wcag_criteria:
                         existing.wcag_criteria.append(criteria)
 
-            else:
-                unique_violations[key] = violation
+                # Merge tags
+                for tag in violation.tags:
+                    if tag not in existing.tags:
+                        existing.tags.append(tag)
 
-        return list(unique_violations.values())
+                # Use most informative description (longer one)
+                if len(violation.description) > len(existing.description):
+                    existing.description = violation.description
+
+                # Use help_text if not set
+                if not existing.help_text and violation.help_text:
+                    existing.help_text = violation.help_text
+
+                # Use help_url if not set
+                if not existing.help_url and violation.help_url:
+                    existing.help_url = violation.help_url
+
+            else:
+                grouped_violations[normalized_rule] = violation
+
+        # Sort by impact (critical first) then by number of instances
+        impact_order = {"critical": 0, "serious": 1, "moderate": 2, "minor": 3}
+        sorted_violations = sorted(
+            grouped_violations.values(),
+            key=lambda v: (impact_order.get(v.impact.value, 4), -len(v.instances))
+        )
+
+        return sorted_violations
 
 
 

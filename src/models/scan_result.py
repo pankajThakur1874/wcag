@@ -38,7 +38,8 @@ class ToolStatus(BaseModel):
 
 class ScanSummary(BaseModel):
     """Summary of scan results."""
-    total_violations: int = 0
+    total_violations: int = 0  # Unique violation types (grouped by rule_id)
+    total_instances: int = 0   # Total affected elements across all violations
     by_impact: dict[str, int] = Field(default_factory=lambda: {
         "critical": 0,
         "serious": 0,
@@ -58,7 +59,11 @@ class ScanSummary(BaseModel):
         summary = cls(passes=passes)
         summary.total_violations = len(violations)
 
+        total_instances = 0
         for violation in violations:
+            # Count total instances (affected elements)
+            total_instances += len(violation.instances)
+
             # Count by impact
             impact_key = violation.impact.value
             summary.by_impact[impact_key] = summary.by_impact.get(impact_key, 0) + 1
@@ -68,6 +73,7 @@ class ScanSummary(BaseModel):
                 level_key = violation.wcag_level.value
                 summary.by_wcag_level[level_key] = summary.by_wcag_level.get(level_key, 0) + 1
 
+        summary.total_instances = total_instances
         return summary
 
 
