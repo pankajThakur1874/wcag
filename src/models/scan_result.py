@@ -22,9 +22,18 @@ class ToolStatus(BaseModel):
     name: str
     version: Optional[str] = None
     status: str = "success"
-    rules_checked: Optional[int] = None
+    rules_checked: int = 0
+    rules_passed: int = 0
+    rules_failed: int = 0
+    score: float = 100.0  # Percentage score for this tool
     error: Optional[str] = None
     duration_ms: Optional[int] = None
+
+    def calculate_score(self) -> float:
+        """Calculate percentage score based on passed/failed rules."""
+        if self.rules_checked == 0:
+            return 100.0
+        return round((self.rules_passed / self.rules_checked) * 100, 1)
 
 
 class ScanSummary(BaseModel):
@@ -65,10 +74,19 @@ class ScanSummary(BaseModel):
 class ScanScores(BaseModel):
     """Scores from different tools."""
     overall: float = 0.0
+    total_rules_checked: int = 0
+    total_rules_passed: int = 0
+    total_rules_failed: int = 0
+    # Per-tool scores
     axe: Optional[float] = None
-    lighthouse: Optional[float] = None
     pa11y: Optional[float] = None
+    lighthouse: Optional[float] = None
     html_validator: Optional[float] = None
+    contrast: Optional[float] = None
+    keyboard: Optional[float] = None
+    aria: Optional[float] = None
+    forms: Optional[float] = None
+    seo: Optional[float] = None
 
 
 class ScanResult(BaseModel):
@@ -85,25 +103,15 @@ class ScanResult(BaseModel):
     error: Optional[str] = None
 
     def calculate_overall_score(self) -> float:
-        """Calculate overall accessibility score (0-100)."""
-        if self.summary.total_violations == 0:
+        """Calculate overall accessibility score (0-100) based on passed/failed tests."""
+        total_checked = self.scores.total_rules_checked
+        total_passed = self.scores.total_rules_passed
+
+        if total_checked == 0:
             return 100.0
 
-        # Weight violations by impact
-        weights = {
-            "critical": 25,
-            "serious": 15,
-            "moderate": 7,
-            "minor": 3
-        }
-
-        penalty = sum(
-            count * weights.get(impact, 5)
-            for impact, count in self.summary.by_impact.items()
-        )
-
-        # Cap at 0 minimum
-        score = max(0, 100 - penalty)
+        # Simple percentage-based score
+        score = (total_passed / total_checked) * 100
         return round(score, 1)
 
     def finalize(self, duration: float) -> None:

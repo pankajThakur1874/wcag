@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WCAG Accessibility Scanner</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .scan-form {
+            padding: 30px;
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .url-input {
+            flex: 1;
+            padding: 16px 20px;
+            font-size: 1rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .url-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .scan-btn {
+            padding: 16px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            background: var(--primary);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .scan-btn:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .scan-btn:disabled {
+            background: var(--gray-300);
+            cursor: not-allowed;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .scanner-options {
+            margin-top: 20px;
+        }
+
+        .scanner-options h4 {
+            color: var(--gray-700);
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+        }
+
+        .scanners-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .scanner-checkbox {
+            display: none;
+        }
+
+        .scanner-label {
+            display: inline-block;
+            padding: 8px 16px;
+            background: white;
+            border: 2px solid var(--gray-200);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .scanner-checkbox:checked + .scanner-label {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .scan-mode-toggle {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 12px;
+            border: 2px solid var(--gray-200);
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .toggle-container input {
+            display: none;
+        }
+
+        .toggle-slider {
+            width: 50px;
+            height: 26px;
+            background: var(--gray-300);
+            border-radius: 13px;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .toggle-slider::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .toggle-container input:checked + .toggle-slider {
+            background: var(--primary);
+        }
+
+        .toggle-container input:checked + .toggle-slider::after {
+            left: 27px;
+        }
+
+        .toggle-label {
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .toggle-hint {
+            font-size: 0.85rem;
+            color: var(--gray-600);
+            margin-top: 8px;
+            margin-left: 62px;
+        }
+
+        .site-wide-options {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f0f4ff;
+            border-radius: 12px;
+            border: 2px solid var(--primary);
+        }
+
+        .options-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .option-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .option-group label {
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        .option-group select {
+            padding: 8px 12px;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.9rem;
+        }
+
+        .pages-summary {
+            margin-top: 20px;
+            padding: 15px;
+            background: var(--gray-50);
+            border-radius: 12px;
+        }
+
+        .pages-summary h4 {
+            margin-bottom: 12px;
+            color: var(--gray-700);
+        }
+
+        .page-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .page-url {
+            font-size: 0.85rem;
+            color: var(--gray-700);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 60%;
+        }
+
+        .page-score {
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .page-score.good { background: #ecfdf5; color: #059669; }
+        .page-score.warning { background: #fffbeb; color: #b45309; }
+        .page-score.bad { background: #fef2f2; color: #dc2626; }
+
+        .progress-section {
+            display: none;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .progress-section.active {
+            display: block;
+        }
+
+        .progress-bar-container {
+            background: var(--gray-200);
+            border-radius: 10px;
+            height: 8px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #a855f7);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.5s ease;
+            animation: progress-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes progress-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .progress-text {
+            color: var(--gray-600);
+            font-size: 0.95rem;
+        }
+
+        .results-section {
+            display: none;
+            padding: 30px;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .score-card {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .score-circle.excellent { background: linear-gradient(135deg, #10b981, #059669); }
+        .score-circle.good { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .score-circle.poor { background: linear-gradient(135deg, #f97316, #ea580c); }
+        .score-circle.critical { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+        .score-value {
+            font-size: 3rem;
+            line-height: 1;
+        }
+
+        .score-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 15px;
+            background: var(--gray-50);
+            border-radius: 12px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--gray-600);
+            margin-top: 4px;
+        }
+
+        .stat-card.critical .stat-value { color: var(--danger); }
+        .stat-card.serious .stat-value { color: #f97316; }
+        .stat-card.moderate .stat-value { color: var(--warning); }
+        .stat-card.minor .stat-value { color: var(--success); }
+
+        .stats-summary {
+            flex: 1;
+        }
+
+        .tests-summary {
+            text-align: center;
+            font-size: 1.2rem;
+            color: var(--gray-700);
+            margin-bottom: 15px;
+            padding: 12px;
+            background: var(--gray-100);
+            border-radius: 10px;
+        }
+
+        .tests-summary .passed-count {
+            font-weight: 700;
+            color: var(--success);
+            font-size: 1.4rem;
+        }
+
+        .download-section {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .download-btn {
+            padding: 12px 24px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .download-btn.html {
+            background: var(--primary);
+            color: white;
+        }
+
+        .download-btn.json {
+            background: var(--gray-700);
+            color: white;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .violations-list {
+            margin-top: 30px;
+            border-top: 1px solid var(--gray-200);
+            padding-top: 30px;
+        }
+
+        .violations-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .violations-header h3 {
+            color: var(--gray-800);
+        }
+
+        .violation-item {
+            background: var(--gray-50);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid var(--gray-300);
+        }
+
+        .violation-item.critical { border-color: var(--danger); }
+        .violation-item.serious { border-color: #f97316; }
+        .violation-item.moderate { border-color: var(--warning); }
+        .violation-item.minor { border-color: var(--success); }
+
+        .violation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .violation-title {
+            font-weight: 600;
+            color: var(--gray-800);
+            flex: 1;
+        }
+
+        .violation-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+
+        .violation-badge.critical { background: #fef2f2; color: var(--danger); }
+        .violation-badge.serious { background: #fff7ed; color: #ea580c; }
+        .violation-badge.moderate { background: #fffbeb; color: #b45309; }
+        .violation-badge.minor { background: #ecfdf5; color: #059669; }
+
+        .violation-meta {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: var(--gray-600);
+        }
+
+        .new-scan-btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary);
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .new-scan-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: var(--danger);
+            padding: 16px;
+            border-radius: 12px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        .tools-used {
+            margin-top: 20px;
+            padding: 20px;
+            background: var(--gray-50);
+            border-radius: 12px;
+        }
+
+        .tools-used h4 {
+            margin-bottom: 12px;
+            color: var(--gray-700);
+        }
+
+        .tools-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tool-badge {
+            padding: 6px 12px;
+            background: white;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tool-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .tool-badge .dot.success { background: var(--success); }
+        .tool-badge .dot.error { background: var(--danger); }
+
+        @media (max-width: 600px) {
+            .input-group {
+                flex-direction: column;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .score-card {
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>WCAG Accessibility Scanner</h1>
+            <p>Scan any website for WCAG 2.2 accessibility violations</p>
+        </header>
+
+        <div class="card">
+            <!-- Scan Form -->
+            <div class="scan-form" id="scanForm">
+                <div class="input-group">
+                    <input type="url"
+                           class="url-input"
+                           id="urlInput"
+                           placeholder="Enter website URL (e.g., https://example.com)"
+                           required>
+                    <button class="scan-btn" id="scanBtn" onclick="startScan()">
+                        <span id="btnText">Scan Website</span>
+                        <div class="spinner" id="spinner" style="display: none;"></div>
+                    </button>
+                </div>
+
+                <div class="scan-mode-toggle">
+                    <label class="toggle-container">
+                        <input type="checkbox" id="siteWideToggle" onchange="toggleSiteWideOptions()">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Scan Entire Website</span>
+                    </label>
+                    <p class="toggle-hint">Enable to crawl and scan all pages on the website</p>
+                </div>
+
+                <div class="site-wide-options" id="siteWideOptions" style="display: none;">
+                    <div class="options-row">
+                        <div class="option-group">
+                            <label for="maxPages">Max Pages:</label>
+                            <select id="maxPages">
+                                <option value="5">5 pages</option>
+                                <option value="10">10 pages</option>
+                                <option value="20" selected>20 pages</option>
+                                <option value="50">50 pages</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label for="maxDepth">Crawl Depth:</label>
+                            <select id="maxDepth">
+                                <option value="1">1 level</option>
+                                <option value="2" selected>2 levels</option>
+                                <option value="3">3 levels</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="scanner-options">
+                    <h4>Select Scanners:</h4>
+                    <div class="scanners-grid">
+                        <input type="checkbox" id="scanner-axe" class="scanner-checkbox" value="axe" checked>
+                        <label for="scanner-axe" class="scanner-label">Axe Core</label>
+
+                        <input type="checkbox" id="scanner-html" class="scanner-checkbox" value="html_validator" checked>
+                        <label for="scanner-html" class="scanner-label">HTML Validator</label>
+
+                        <input type="checkbox" id="scanner-contrast" class="scanner-checkbox" value="contrast" checked>
+                        <label for="scanner-contrast" class="scanner-label">Contrast Checker</label>
+
+                        <input type="checkbox" id="scanner-keyboard" class="scanner-checkbox" value="keyboard" checked>
+                        <label for="scanner-keyboard" class="scanner-label">Keyboard</label>
+
+                        <input type="checkbox" id="scanner-aria" class="scanner-checkbox" value="aria" checked>
+                        <label for="scanner-aria" class="scanner-label">ARIA</label>
+
+                        <input type="checkbox" id="scanner-forms" class="scanner-checkbox" value="forms" checked>
+                        <label for="scanner-forms" class="scanner-label">Forms</label>
+
+                        <input type="checkbox" id="scanner-seo" class="scanner-checkbox" value="seo" checked>
+                        <label for="scanner-seo" class="scanner-label">SEO/Meta</label>
+
+                        <input type="checkbox" id="scanner-pa11y" class="scanner-checkbox" value="pa11y">
+                        <label for="scanner-pa11y" class="scanner-label">Pa11y</label>
+
+                        <input type="checkbox" id="scanner-lighthouse" class="scanner-checkbox" value="lighthouse">
+                        <label for="scanner-lighthouse" class="scanner-label">Lighthouse</label>
+                    </div>
+                </div>
+
+                <div class="error-message" id="errorMessage"></div>
+            </div>
+
+            <!-- Progress Section -->
+            <div class="progress-section" id="progressSection">
+                <h3>Scanning in Progress...</h3>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <p class="progress-text" id="progressText">Initializing scanners...</p>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection">
+                <div class="score-card">
+                    <div class="score-circle" id="scoreCircle">
+                        <span class="score-value" id="scoreValue">--</span>
+                        <span class="score-label">Score %</span>
+                    </div>
+
+                    <div class="stats-summary">
+                        <div class="tests-summary" id="testsSummary">
+                            <span class="passed-count" id="passedCount">0</span> / <span id="totalCount">0</span> tests passed
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-card critical">
+                                <div class="stat-value" id="criticalCount">0</div>
+                                <div class="stat-label">Critical</div>
+                            </div>
+                            <div class="stat-card serious">
+                                <div class="stat-value" id="seriousCount">0</div>
+                                <div class="stat-label">Serious</div>
+                            </div>
+                            <div class="stat-card moderate">
+                                <div class="stat-value" id="moderateCount">0</div>
+                                <div class="stat-label">Moderate</div>
+                            </div>
+                            <div class="stat-card minor">
+                                <div class="stat-value" id="minorCount">0</div>
+                                <div class="stat-label">Minor</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="download-section">
+                    <button class="download-btn html" onclick="downloadReport('html')">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z"/>
+                        </svg>
+                        Download HTML Report
+                    </button>
+                    <button class="download-btn json" onclick="downloadReport('json')">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z"/>
+                        </svg>
+                        Download JSON Report
+                    </button>
+                </div>
+
+                <div class="pages-summary" id="pagesSummary" style="display: none;">
+                    <h4>Pages Scanned (<span id="pagesCount">0</span>)</h4>
+                    <div id="pagesContainer"></div>
+                </div>
+
+                <div class="tools-used" id="toolsUsed">
+                    <h4>Scanners Used:</h4>
+                    <div class="tools-grid" id="toolsGrid"></div>
+                </div>
+
+                <div class="violations-list" id="violationsList">
+                    <div class="violations-header">
+                        <h3>Violations (<span id="totalViolations">0</span>)</h3>
+                    </div>
+                    <div id="violationsContainer"></div>
+                </div>
+
+                <button class="new-scan-btn" onclick="newScan()">Start New Scan</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentScanId = null;
+        let scanResult = null;
+        let isSiteWide = false;
+
+        function getSelectedScanners() {
+            const checkboxes = document.querySelectorAll('.scanner-checkbox:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        function toggleSiteWideOptions() {
+            const toggle = document.getElementById('siteWideToggle');
+            const options = document.getElementById('siteWideOptions');
+            options.style.display = toggle.checked ? 'block' : 'none';
+        }
+
+        async function startScan() {
+            const urlInput = document.getElementById('urlInput');
+            const url = urlInput.value.trim();
+
+            if (!url) {
+                showError('Please enter a valid URL');
+                return;
+            }
+
+            // Validate URL
+            try {
+                new URL(url);
+            } catch {
+                showError('Please enter a valid URL (including https://)');
+                return;
+            }
+
+            const scanners = getSelectedScanners();
+            if (scanners.length === 0) {
+                showError('Please select at least one scanner');
+                return;
+            }
+
+            hideError();
+            showProgress();
+
+            // Check if site-wide scan
+            isSiteWide = document.getElementById('siteWideToggle').checked;
+            const maxPages = parseInt(document.getElementById('maxPages').value);
+            const maxDepth = parseInt(document.getElementById('maxDepth').value);
+
+            try {
+                // Start scan
+                const requestBody = {
+                    url: url,
+                    tools: scanners,
+                    site_wide: isSiteWide,
+                    max_pages: maxPages,
+                    max_depth: maxDepth
+                };
+
+                const response = await fetch('/api/v1/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to start scan');
+                }
+
+                const data = await response.json();
+                currentScanId = data.scan_id;
+
+                // Poll for results
+                const msg = isSiteWide ? 'Crawling website...' : 'Scan started, running scanners...';
+                updateProgress(10, msg);
+                await pollForResults();
+
+            } catch (error) {
+                showError('Error: ' + error.message);
+                hideProgress();
+            }
+        }
+
+        async function pollForResults() {
+            const checkResult = async () => {
+                try {
+                    const response = await fetch(`/api/v1/scan/${currentScanId}`);
+                    const data = await response.json();
+
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        if (data.status === 'completed') {
+                            scanResult = data;
+                            updateProgress(100, 'Scan complete!');
+                            setTimeout(() => {
+                                if (data.site_wide) {
+                                    showSiteWideResults(data);
+                                } else {
+                                    showResults(data);
+                                }
+                            }, 500);
+                        } else {
+                            showError('Scan failed: ' + (data.error || 'Unknown error'));
+                            hideProgress();
+                        }
+                        return;
+                    }
+
+                    // Update progress based on scan type
+                    if (data.site_wide && data.progress) {
+                        const prog = data.progress;
+                        const phase = prog.phase === 'crawling' ? 'Crawling' : 'Scanning';
+                        const pct = prog.total > 0 ? Math.round((prog.current / prog.total) * 100) : 10;
+                        updateProgress(Math.min(90, pct), `${phase}: ${prog.message || ''}`);
+                    } else {
+                        updateProgress(50, 'Running accessibility checks...');
+                    }
+
+                    // Poll again
+                    setTimeout(checkResult, 2000);
+
+                } catch (error) {
+                    showError('Error checking scan status');
+                    hideProgress();
+                }
+            };
+
+            await checkResult();
+        }
+
+        function updateProgress(percent, text) {
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressText').textContent = text;
+        }
+
+        function showProgress() {
+            document.getElementById('scanBtn').disabled = true;
+            document.getElementById('btnText').textContent = 'Scanning...';
+            document.getElementById('spinner').style.display = 'block';
+            document.getElementById('progressSection').classList.add('active');
+            document.getElementById('resultsSection').classList.remove('active');
+        }
+
+        function hideProgress() {
+            document.getElementById('scanBtn').disabled = false;
+            document.getElementById('btnText').textContent = 'Scan Website';
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('progressSection').classList.remove('active');
+        }
+
+        function showResults(data) {
+            hideProgress();
+            document.getElementById('resultsSection').classList.add('active');
+            document.getElementById('pagesSummary').style.display = 'none';
+
+            // Update score
+            const score = Math.round(data.scores.overall);
+            document.getElementById('scoreValue').textContent = score;
+
+            const scoreCircle = document.getElementById('scoreCircle');
+            scoreCircle.className = 'score-circle';
+            if (score >= 90) scoreCircle.classList.add('excellent');
+            else if (score >= 70) scoreCircle.classList.add('good');
+            else if (score >= 50) scoreCircle.classList.add('poor');
+            else scoreCircle.classList.add('critical');
+
+            // Update tests passed/total
+            const scores = data.scores;
+            document.getElementById('passedCount').textContent = scores.total_rules_passed || 0;
+            document.getElementById('totalCount').textContent = scores.total_rules_checked || 0;
+
+            // Update stats
+            const impact = data.summary.by_impact;
+            document.getElementById('criticalCount').textContent = impact.critical || 0;
+            document.getElementById('seriousCount').textContent = impact.serious || 0;
+            document.getElementById('moderateCount').textContent = impact.moderate || 0;
+            document.getElementById('minorCount').textContent = impact.minor || 0;
+            document.getElementById('totalViolations').textContent = data.summary.total_violations;
+
+            // Update tools used with scores
+            const toolsGrid = document.getElementById('toolsGrid');
+            toolsGrid.innerHTML = '';
+            for (const [name, status] of Object.entries(data.tools_used)) {
+                const badge = document.createElement('div');
+                badge.className = 'tool-badge';
+                const toolScore = status.score !== undefined ? status.score.toFixed(1) + '%' : 'N/A';
+                const passedFailed = `${status.rules_passed}/${status.rules_checked}`;
+                badge.innerHTML = `
+                    <span class="dot ${status.status}"></span>
+                    ${name}: ${toolScore} (${passedFailed})
+                `;
+                toolsGrid.appendChild(badge);
+            }
+
+            // Update violations list
+            const container = document.getElementById('violationsContainer');
+            container.innerHTML = '';
+
+            data.violations.slice(0, 50).forEach(violation => {
+                const item = document.createElement('div');
+                item.className = `violation-item ${violation.impact}`;
+                item.innerHTML = `
+                    <div class="violation-header">
+                        <span class="violation-title">${escapeHtml(violation.description)}</span>
+                        <span class="violation-badge ${violation.impact}">${violation.impact}</span>
+                    </div>
+                    <div class="violation-meta">
+                        <span>WCAG: ${violation.wcag_criteria.join(', ') || 'N/A'}</span>
+                        <span>Detected by: ${violation.detected_by.join(', ')}</span>
+                        <span>Instances: ${violation.instances.length}</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+
+            if (data.violations.length > 50) {
+                const more = document.createElement('p');
+                more.style.textAlign = 'center';
+                more.style.color = '#666';
+                more.style.marginTop = '20px';
+                more.textContent = `... and ${data.violations.length - 50} more violations. Download the full report to see all.`;
+                container.appendChild(more);
+            }
+        }
+
+        function showSiteWideResults(data) {
+            hideProgress();
+            document.getElementById('resultsSection').classList.add('active');
+
+            // Update score
+            const score = Math.round(data.overall_score);
+            document.getElementById('scoreValue').textContent = score;
+
+            const scoreCircle = document.getElementById('scoreCircle');
+            scoreCircle.className = 'score-circle';
+            if (score >= 90) scoreCircle.classList.add('excellent');
+            else if (score >= 70) scoreCircle.classList.add('good');
+            else if (score >= 50) scoreCircle.classList.add('poor');
+            else scoreCircle.classList.add('critical');
+
+            // Update tests passed/total
+            document.getElementById('passedCount').textContent = data.total_rules_passed || 0;
+            document.getElementById('totalCount').textContent = data.total_rules_checked || 0;
+
+            // Update stats from summary
+            const summary = data.summary || {};
+            const impact = summary.by_impact || {};
+            document.getElementById('criticalCount').textContent = impact.critical || 0;
+            document.getElementById('seriousCount').textContent = impact.serious || 0;
+            document.getElementById('moderateCount').textContent = impact.moderate || 0;
+            document.getElementById('minorCount').textContent = impact.minor || 0;
+            document.getElementById('totalViolations').textContent = data.unique_violations_count || 0;
+
+            // Show pages summary
+            const pagesSummary = document.getElementById('pagesSummary');
+            const pagesContainer = document.getElementById('pagesContainer');
+            pagesSummary.style.display = 'block';
+            document.getElementById('pagesCount').textContent = data.pages_scanned || 0;
+
+            pagesContainer.innerHTML = '';
+            const pageResults = data.page_results || [];
+            pageResults.forEach(page => {
+                const item = document.createElement('div');
+                item.className = 'page-item';
+
+                let scoreClass = 'bad';
+                if (page.score >= 90) scoreClass = 'good';
+                else if (page.score >= 70) scoreClass = 'warning';
+
+                item.innerHTML = `
+                    <span class="page-url" title="${escapeHtml(page.url)}">${escapeHtml(page.url)}</span>
+                    <span class="page-score ${scoreClass}">${page.score}% (${page.violations_count} issues)</span>
+                `;
+                pagesContainer.appendChild(item);
+            });
+
+            // Update tools used
+            const toolsGrid = document.getElementById('toolsGrid');
+            toolsGrid.innerHTML = '';
+            const tools = data.tools_used || [];
+            tools.forEach(tool => {
+                const badge = document.createElement('div');
+                badge.className = 'tool-badge';
+                badge.innerHTML = `<span class="dot success"></span> ${tool}`;
+                toolsGrid.appendChild(badge);
+            });
+
+            // Build violations from summary (site-wide doesn't return full violations list in API)
+            const container = document.getElementById('violationsContainer');
+            container.innerHTML = '';
+
+            // Show worst pages info
+            if (summary.worst_pages && summary.worst_pages.length > 0) {
+                const worstSection = document.createElement('div');
+                worstSection.style.marginBottom = '20px';
+                worstSection.innerHTML = `
+                    <h4 style="color: var(--gray-700); margin-bottom: 10px;">Pages with Most Issues:</h4>
+                    ${summary.worst_pages.map(p => `
+                        <div class="violation-item serious">
+                            <div class="violation-header">
+                                <span class="violation-title">${escapeHtml(p.url)}</span>
+                                <span class="violation-badge serious">${p.violations} issues</span>
+                            </div>
+                            <div class="violation-meta">
+                                <span>Score: ${p.score}%</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                `;
+                container.appendChild(worstSection);
+            }
+
+            // Summary message
+            const summaryMsg = document.createElement('p');
+            summaryMsg.style.textAlign = 'center';
+            summaryMsg.style.color = '#666';
+            summaryMsg.style.marginTop = '20px';
+            summaryMsg.innerHTML = `
+                <strong>${data.pages_scanned} pages scanned</strong> |
+                <strong>${data.unique_violations_count} unique violations</strong> |
+                <strong>${data.total_violations_count} total occurrences</strong><br>
+                Average score: ${summary.average_score || 0}%
+            `;
+            container.appendChild(summaryMsg);
+        }
+
+        function downloadReport(format) {
+            if (!currentScanId) return;
+            window.open(`/api/v1/scan/${currentScanId}/download?format=${format}`, '_blank');
+        }
+
+        function newScan() {
+            document.getElementById('resultsSection').classList.remove('active');
+            document.getElementById('pagesSummary').style.display = 'none';
+            document.getElementById('urlInput').value = '';
+            document.getElementById('urlInput').focus();
+            currentScanId = null;
+            scanResult = null;
+            isSiteWide = false;
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('active');
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').classList.remove('active');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Enter key to submit
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                startScan();
+            }
+        });
+    </script>
+</body>
+</html>

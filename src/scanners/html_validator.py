@@ -52,16 +52,30 @@ class HTMLValidatorScanner(BaseScanner):
 
         violations = []
 
-        # Run all checks
-        violations.extend(self._check_lang_attribute(soup))
-        violations.extend(self._check_page_title(soup))
-        violations.extend(self._check_heading_hierarchy(soup))
-        violations.extend(self._check_images_alt(soup))
-        violations.extend(self._check_form_labels(soup))
-        violations.extend(self._check_links(soup))
-        violations.extend(self._check_tables(soup))
-        violations.extend(self._check_landmarks(soup))
-        violations.extend(self._check_skip_link(soup))
+        # This scanner checks 9 rules
+        self._rules_checked = 9
+
+        # Track which checks fail
+        checks = [
+            ("lang_attribute", self._check_lang_attribute(soup)),
+            ("page_title", self._check_page_title(soup)),
+            ("heading_hierarchy", self._check_heading_hierarchy(soup)),
+            ("images_alt", self._check_images_alt(soup)),
+            ("form_labels", self._check_form_labels(soup)),
+            ("links", self._check_links(soup)),
+            ("tables", self._check_tables(soup)),
+            ("landmarks", self._check_landmarks(soup)),
+            ("skip_link", self._check_skip_link(soup)),
+        ]
+
+        failed_rules = 0
+        for check_name, check_violations in checks:
+            if check_violations:
+                failed_rules += 1
+            violations.extend(check_violations)
+
+        self._rules_failed = failed_rules
+        self._rules_passed = self._rules_checked - failed_rules
 
         return violations
 

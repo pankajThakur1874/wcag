@@ -82,7 +82,9 @@ class ResultsAggregator:
                 scanner_class = SCANNERS[tool_name]
 
                 # Create scanner with shared browser where applicable
-                if tool_name in ["axe", "html_validator", "contrast"]:
+                # Browser-based scanners
+                browser_scanners = ["axe", "html_validator", "contrast", "keyboard", "aria", "forms", "seo"]
+                if tool_name in browser_scanners:
                     scanner = scanner_class(browser_manager=self._browser_manager)
                 else:
                     scanner = scanner_class()
@@ -115,41 +117,55 @@ class ResultsAggregator:
             # Deduplicate violations
             deduplicated = self._deduplicate_violations(all_violations)
 
-            # Calculate passes from axe
-            total_passes = sum(
-                status.rules_checked or 0
-                for status in tool_statuses.values()
-                if status.status == "success"
-            )
+            # Calculate total rules checked/passed/failed from all tools
+            total_rules_checked = 0
+            total_rules_passed = 0
+            total_rules_failed = 0
+
+            for status in tool_statuses.values():
+                if status.status == "success":
+                    total_rules_checked += status.rules_checked
+                    total_rules_passed += status.rules_passed
+                    total_rules_failed += status.rules_failed
+
+            # Update scores with totals
+            result.scores.total_rules_checked = total_rules_checked
+            result.scores.total_rules_passed = total_rules_passed
+            result.scores.total_rules_failed = total_rules_failed
 
             # Update result
             result.violations = deduplicated
             result.tools_used = tool_statuses
-            result.summary.passes = total_passes
+            result.summary.passes = total_rules_passed
             result.finalize(time.time() - start_time)
 
-            # Update tool-specific scores
+            # Update tool-specific scores from their status
             for tool_name, status in tool_statuses.items():
-                if tool_name == "axe":
-                    result.scores.axe = self._calculate_tool_score(
-                        [v for v in deduplicated if "axe" in v.detected_by]
-                    )
-                elif tool_name == "lighthouse":
-                    result.scores.lighthouse = self._calculate_tool_score(
-                        [v for v in deduplicated if "lighthouse" in v.detected_by]
-                    )
-                elif tool_name == "pa11y":
-                    result.scores.pa11y = self._calculate_tool_score(
-                        [v for v in deduplicated if "pa11y" in v.detected_by]
-                    )
-                elif tool_name == "html_validator":
-                    result.scores.html_validator = self._calculate_tool_score(
-                        [v for v in deduplicated if "html_validator" in v.detected_by]
-                    )
+                if status.status == "success":
+                    score = status.score
+                    if tool_name == "axe":
+                        result.scores.axe = score
+                    elif tool_name == "pa11y":
+                        result.scores.pa11y = score
+                    elif tool_name == "lighthouse":
+                        result.scores.lighthouse = score
+                    elif tool_name == "html_validator":
+                        result.scores.html_validator = score
+                    elif tool_name == "contrast":
+                        result.scores.contrast = score
+                    elif tool_name == "keyboard":
+                        result.scores.keyboard = score
+                    elif tool_name == "aria":
+                        result.scores.aria = score
+                    elif tool_name == "forms":
+                        result.scores.forms = score
+                    elif tool_name == "seo":
+                        result.scores.seo = score
 
             logger.info(
-                f"Scan completed: {len(deduplicated)} violations found "
-                f"(score: {result.scores.overall})"
+                f"Scan completed: {len(deduplicated)} violations found, "
+                f"{total_rules_passed}/{total_rules_checked} rules passed "
+                f"(score: {result.scores.overall}%)"
             )
 
             return result
@@ -209,25 +225,6 @@ class ResultsAggregator:
 
         return list(unique_violations.values())
 
-    def _calculate_tool_score(self, violations: list[Violation]) -> float:
-        """Calculate a score (0-100) based on violations."""
-        if not violations:
-            return 100.0
-
-        # Weight by impact
-        weights = {
-            "critical": 25,
-            "serious": 15,
-            "moderate": 7,
-            "minor": 3
-        }
-
-        penalty = sum(
-            weights.get(v.impact.value, 5)
-            for v in violations
-        )
-
-        return max(0.0, min(100.0, 100.0 - penalty))
 
 
 async def run_scan(url: str, tools: Optional[list[str]] = None) -> ScanResult:

@@ -76,8 +76,17 @@ class AxeScanner(BaseScanner):
 
         axe_results = json.loads(results)
 
-        # Track passes
-        self._passes = len(axe_results.get("passes", []))
+        # Count rules checked (passes + violations + incomplete)
+        passes = len(axe_results.get("passes", []))
+        violations_count = len(axe_results.get("violations", []))
+        incomplete = len(axe_results.get("incomplete", []))
+
+        # Set rules checked for percentage calculation
+        self._rules_checked = passes + violations_count + incomplete
+        self._rules_passed = passes
+        self._rules_failed = violations_count
+
+        logger.debug(f"Axe: {passes} passed, {violations_count} failed, {incomplete} incomplete")
 
         # Convert to our violation format
         violations = []

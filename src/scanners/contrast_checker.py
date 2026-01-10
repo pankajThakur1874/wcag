@@ -54,6 +54,7 @@ class ContrastChecker(BaseScanner):
     async def _check_contrast(self, page) -> list[Violation]:
         """Check contrast of text elements on the page."""
         violations = []
+        elements_checked = 0
 
         # Get all text elements with their computed colors
         elements_data = await page.evaluate("""
@@ -116,6 +117,7 @@ class ContrastChecker(BaseScanner):
                 if fg_rgb is None or bg_rgb is None:
                     continue
 
+                elements_checked += 1
                 contrast_ratio = self._calculate_contrast(fg_rgb, bg_rgb)
                 font_size = elem_data.get("fontSize", 16)
                 font_weight = elem_data.get("fontWeight", "400")
@@ -156,6 +158,11 @@ class ContrastChecker(BaseScanner):
             except Exception as e:
                 logger.debug(f"Error checking contrast for element: {e}")
                 continue
+
+        # Set rules checked stats (each element is a test)
+        self._rules_checked = elements_checked
+        self._rules_failed = len(violations)
+        self._rules_passed = elements_checked - len(violations)
 
         return violations
 
