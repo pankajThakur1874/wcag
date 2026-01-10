@@ -483,7 +483,7 @@ async def list_tools():
             "pa11y": "Pa11y automated accessibility testing",
             "lighthouse": "Google Lighthouse accessibility audits",
             "html_validator": "HTML structure validation",
-            "contrast": "Color contrast checker",
+            "contrast": "Color contrast checker (WCAG AA/AAA)",
             "keyboard": "Keyboard accessibility testing",
             "aria": "ARIA roles and attributes validation",
             "forms": "Form accessibility checker",
@@ -492,7 +492,8 @@ async def list_tools():
             "image_alt": "Image alt text quality",
             "media": "Video/audio accessibility",
             "touch_target": "Touch target size checker",
-            "readability": "Content readability analysis"
+            "readability": "Content readability analysis",
+            "interactive": "Interactive elements (tabs, modals, accordions, dropdowns)"
         }
     }
 
@@ -505,3 +506,81 @@ async def delete_scan(scan_id: str):
 
     del _scan_results[scan_id]
     return {"message": f"Scan {scan_id} deleted"}
+
+
+@router.post("/scan/upload", response_model=ScanResponse)
+async def scan_uploaded_file(
+    file: UploadFile = File(...),
+    tools: Optional[str] = Form(None),
+    background_tasks: BackgroundTasks = None
+) -> ScanResponse:
+    """
+    Scan an uploaded HTML file.
+    
+    Upload a saved HTML file to scan it offline without needing the live website.
+    """
+    import tempfile
+    import json
+    from pathlib import Path
+    
+    # Validate file type
+    if not file.filename.endswith(('.html', '.htm')):
+        raise HTTPException(
+            status_code=400,
+            detail="Only HTML files (.html, .htm) are supported"
+        )
+    
+    # Parse tools
+    tools_list = json.loads(tools) if tools else None
+    
+    # Save uploaded file temporarily
+    with tempfile.NamedTemporaryFile(mode='wb', suffix='.html', delete=False) as tmp:
+        content = await file.read()
+        tmp.write(content)
+        tmp_path = tmp.name
+    
+    scan_id = str(uuid4())
+    
+    # Create file:// URL
+    file_url = Path(tmp_path).absolute().as_uri()
+    
+    result = ScanResult(
+        scan_id=scan_id,
+        url=file_url,
+        status=ScanStatus.PENDING
+    )
+    _scan_results[scan_id] = result
+    
+    # Run scan in background
+    async def _scan_file():
+        try:
+            _scan_results[scan_id].status = ScanStatus.RUNNING
+            
+            aggregator = ResultsAggregator(tools=tools_list)
+            scan_result = await aggregator.scan(file_url)
+            scan_result.scan_id = scan_id
+            scan_result.url = f"Uploaded file: {file.filename}"
+            
+            _scan_results[scan_id] = scan_result
+            
+            # Clean up temp file
+            import os
+            try:
+                os.unlink(tmp_path)
+            except:
+                pass
+                
+        except Exception as e:
+            logger.error(f"File scan {scan_id} failed: {e}")
+            _scan_results[scan_id].status = ScanStatus.FAILED
+            _scan_results[scan_id].error = str(e)
+    
+    # Schedule background task
+    import asyncio
+    asyncio.create_task(_scan_file())
+    
+    return ScanResponse(
+        scan_id=scan_id,
+        status="pending",
+        message=f"Scanning uploaded file: {file.filename}"
+    )

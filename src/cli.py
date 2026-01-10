@@ -215,7 +215,17 @@ def tools():
         "pa11y": "Pa11y automated accessibility testing tool",
         "lighthouse": "Google Lighthouse accessibility audits",
         "html_validator": "HTML structure and semantic validation",
-        "contrast": "Color contrast ratio checker"
+        "contrast": "Color contrast ratio checker (WCAG AA/AAA)",
+        "keyboard": "Keyboard navigation accessibility testing",
+        "aria": "ARIA roles and attributes validation",
+        "seo": "SEO and meta accessibility checking",
+        "forms": "Form accessibility and labeling validation",
+        "link_text": "Link text quality and descriptiveness checking",
+        "image_alt": "Image alt text quality validation",
+        "media": "Video and audio accessibility (captions, transcripts)",
+        "touch_target": "Touch target size validation (mobile accessibility)",
+        "readability": "Text readability and complexity analysis",
+        "interactive": "Interactive elements (tabs, modals, accordions, dropdowns)"
     }
 
     for name in SCANNERS:

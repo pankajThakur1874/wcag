@@ -15,6 +15,7 @@ from src.scanners.image_alt_scanner import ImageAltScanner
 from src.scanners.media_scanner import MediaScanner
 from src.scanners.touch_target_scanner import TouchTargetScanner
 from src.scanners.readability_scanner import ReadabilityScanner
+from src.scanners.interactive_scanner import InteractiveScanner
 
 __all__ = [
     "BaseScanner",
@@ -31,7 +32,8 @@ __all__ = [
     "ImageAltScanner",
     "MediaScanner",
     "TouchTargetScanner",
-    "ReadabilityScanner"
+    "ReadabilityScanner",
+    "InteractiveScanner"
 ]
 
 # Scanner registry - all available scanners
@@ -49,13 +51,14 @@ SCANNERS = {
     "image_alt": ImageAltScanner,
     "media": MediaScanner,
     "touch_target": TouchTargetScanner,
-    "readability": ReadabilityScanner
+    "readability": ReadabilityScanner,
+    "interactive": InteractiveScanner
 }
 
 # Default scanners to run (fast and reliable)
 DEFAULT_SCANNERS = [
     "axe", "html_validator", "contrast", "keyboard", "aria", "forms", "seo",
-    "link_text", "image_alt", "media", "touch_target", "readability"
+    "link_text", "image_alt", "media", "touch_target", "readability", "interactive"
 ]
 
 # All scanners including external tools
