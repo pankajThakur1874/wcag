@@ -83,7 +83,10 @@ class ResultsAggregator:
 
                 # Create scanner with shared browser where applicable
                 # Browser-based scanners
-                browser_scanners = ["axe", "html_validator", "contrast", "keyboard", "aria", "forms", "seo"]
+                browser_scanners = [
+                    "axe", "html_validator", "contrast", "keyboard", "aria", "forms", "seo",
+                    "link_text", "image_alt", "media", "touch_target", "readability"
+                ]
                 if tool_name in browser_scanners:
                     scanner = scanner_class(browser_manager=self._browser_manager)
                 else:

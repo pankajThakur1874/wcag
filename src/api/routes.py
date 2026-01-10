@@ -487,7 +487,12 @@ async def list_tools():
             "keyboard": "Keyboard accessibility testing",
             "aria": "ARIA roles and attributes validation",
             "forms": "Form accessibility checker",
-            "seo": "SEO and meta accessibility"
+            "seo": "SEO and meta accessibility",
+            "link_text": "Link text quality (vague links)",
+            "image_alt": "Image alt text quality",
+            "media": "Video/audio accessibility",
+            "touch_target": "Touch target size checker",
+            "readability": "Content readability analysis"
         }
     }
 
