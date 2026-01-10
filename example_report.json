@@ -1,0 +1,207 @@
+{
+  "metadata": {
+    "generated_at": "2026-01-10T20:46:46.851321",
+    "scanner_version": "1.0.0",
+    "wcag_version": "2.2"
+  },
+  "scan_result": {
+    "scan_id": "fbac3aaa-c6a3-40a7-ba2a-74cadac4b1a7",
+    "url": "https://example.com",
+    "timestamp": "2026-01-10T20:46:44.179675",
+    "status": "completed",
+    "duration_seconds": 2.63,
+    "scores": {
+      "overall": 87.5,
+      "total_rules_checked": 16,
+      "total_rules_passed": 14,
+      "total_rules_failed": 2,
+      "axe": 87.5,
+      "pa11y": null,
+      "lighthouse": null,
+      "html_validator": null,
+      "contrast": null,
+      "keyboard": null,
+      "aria": null,
+      "forms": null,
+      "seo": null
+    },
+    "summary": {
+      "total_violations": 2,
+      "total_instances": 2,
+      "by_impact": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 2,
+        "minor": 0
+      },
+      "by_wcag_level": {
+        "A": 0,
+        "AA": 0,
+        "AAA": 0
+      },
+      "passes": 14
+    },
+    "violations": [
+      {
+        "id": "axe-landmark-one-main",
+        "rule_id": "landmark-one-main",
+        "wcag_criteria": [],
+        "wcag_level": null,
+        "impact": "moderate",
+        "description": "Ensures the document has a main landmark",
+        "help_text": "Document should have one main landmark",
+        "help_url": "https://dequeuniversity.com/rules/axe/4.8/landmark-one-main?application=axeAPI",
+        "detected_by": [
+          "axe"
+        ],
+        "instances": [
+          {
+            "html": "<html lang=\"en\">",
+            "selector": "html",
+            "xpath": null,
+            "fix_suggestion": "Fix all of the following:\n  Document does not have a main landmark"
+          }
+        ],
+        "tags": [
+          "cat.semantics",
+          "best-practice"
+        ]
+      },
+      {
+        "id": "axe-region",
+        "rule_id": "region",
+        "wcag_criteria": [],
+        "wcag_level": null,
+        "impact": "moderate",
+        "description": "Ensures all page content is contained by landmarks",
+        "help_text": "All page content should be contained by landmarks",
+        "help_url": "https://dequeuniversity.com/rules/axe/4.8/region?application=axeAPI",
+        "detected_by": [
+          "axe"
+        ],
+        "instances": [
+          {
+            "html": "<div><h1>Example Domain</h1><p>This domain is for use in documentation examples without needing permission. Avoid use in operations.</p><p><a href=\"https://iana.org/domains/example\">Learn more</a></p></div>",
+            "selector": "div",
+            "xpath": null,
+            "fix_suggestion": "Fix any of the following:\n  Some page content is not contained by landmarks"
+          }
+        ],
+        "tags": [
+          "cat.keyboard",
+          "best-practice"
+        ]
+      }
+    ],
+    "tools_used": {
+      "axe": {
+        "name": "axe",
+        "version": "4.8.3",
+        "status": "success",
+        "rules_checked": 16,
+        "rules_passed": 14,
+        "rules_failed": 2,
+        "score": 87.5,
+        "error": null,
+        "duration_ms": 2001
+      }
+    },
+    "error": null
+  },
+  "wcag_coverage": {
+    "automatable_criteria": 28,
+    "criteria_checked": 0,
+    "manual_review_needed": [
+      {
+        "criteria": "1.1.1",
+        "description": "Non-text Content",
+        "reason": "Alt text quality requires human review to verify accuracy"
+      },
+      {
+        "criteria": "1.2.1",
+        "description": "Audio-only and Video-only (Prerecorded)",
+        "reason": "Audio/video content requires manual review"
+      },
+      {
+        "criteria": "1.2.2",
+        "description": "Captions (Prerecorded)",
+        "reason": "Caption quality and accuracy requires manual review"
+      },
+      {
+        "criteria": "1.2.3",
+        "description": "Audio Description or Media Alternative (Prerecorded)",
+        "reason": "Audio description accuracy requires manual review"
+      },
+      {
+        "criteria": "1.2.4",
+        "description": "Captions (Live)",
+        "reason": "Live caption quality requires manual review"
+      },
+      {
+        "criteria": "1.2.5",
+        "description": "Audio Description (Prerecorded)",
+        "reason": "Audio description completeness requires manual review"
+      },
+      {
+        "criteria": "1.3.2",
+        "description": "Meaningful Sequence",
+        "reason": "Meaningful sequence requires contextual understanding"
+      },
+      {
+        "criteria": "1.3.3",
+        "description": "Sensory Characteristics",
+        "reason": "Sensory characteristics usage requires manual review"
+      },
+      {
+        "criteria": "2.1.1",
+        "description": "Keyboard",
+        "reason": "Full keyboard accessibility requires manual testing"
+      },
+      {
+        "criteria": "2.4.4",
+        "description": "Link Purpose (In Context)",
+        "reason": "Link purpose in context requires manual review"
+      },
+      {
+        "criteria": "2.4.6",
+        "description": "Headings and Labels",
+        "reason": "Heading and label descriptiveness requires manual review"
+      },
+      {
+        "criteria": "3.1.3",
+        "description": "Unusual Words",
+        "reason": "Unusual word definitions require content review"
+      },
+      {
+        "criteria": "3.1.4",
+        "description": "Abbreviations",
+        "reason": "Abbreviation expansions require content review"
+      },
+      {
+        "criteria": "3.1.5",
+        "description": "Reading Level",
+        "reason": "Reading level assessment requires content review"
+      },
+      {
+        "criteria": "3.2.3",
+        "description": "Consistent Navigation",
+        "reason": "Navigation consistency requires cross-page review"
+      },
+      {
+        "criteria": "3.2.4",
+        "description": "Consistent Identification",
+        "reason": "Component identification consistency requires cross-page review"
+      },
+      {
+        "criteria": "3.3.1",
+        "description": "Error Identification",
+        "reason": "Error message clarity requires manual review"
+      },
+      {
+        "criteria": "3.3.3",
+        "description": "Error Suggestion",
+        "reason": "Error suggestion helpfulness requires manual review"
+      }
+    ]
+  }
+}

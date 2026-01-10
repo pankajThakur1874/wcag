@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WCAG Accessibility Report - https://www.britishairways.com/</title>
+    <style>
+        :root {
+            --color-critical: #dc3545;
+            --color-serious: #fd7e14;
+            --color-moderate: #ffc107;
+            --color-minor: #28a745;
+            --color-pass: #28a745;
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+            color: var(--text-primary);
+            padding: 40px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .header .url {
+            color: var(--text-secondary);
+            word-break: break-all;
+            font-size: 1.1rem;
+        }
+
+        .header .meta {
+            margin-top: 15px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Score Card */
+        .score-section {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .score-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .score-card .score {
+            font-size: 4rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .score-card .score.excellent { color: var(--color-pass); }
+        .score-card .score.good { color: var(--color-moderate); }
+        .score-card .score.poor { color: var(--color-serious); }
+        .score-card .score.critical { color: var(--color-critical); }
+
+        .score-card .label {
+            color: #666;
+            margin-top: 10px;
+            font-size: 1.1rem;
+        }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border-left: 4px solid #ddd;
+        }
+
+        .summary-card.critical { border-color: var(--color-critical); }
+        .summary-card.serious { border-color: var(--color-serious); }
+        .summary-card.moderate { border-color: var(--color-moderate); }
+        .summary-card.minor { border-color: var(--color-minor); }
+        .summary-card.passes { border-color: var(--color-pass); }
+
+        .summary-card .value {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .summary-card.critical .value { color: var(--color-critical); }
+        .summary-card.serious .value { color: var(--color-serious); }
+        .summary-card.moderate .value { color: var(--color-moderate); }
+        .summary-card.minor .value { color: var(--color-minor); }
+        .summary-card.passes .value { color: var(--color-pass); }
+
+        .summary-card .label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* Sections */
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .section h2 {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        /* Violations */
+        .violation {
+            border-left: 4px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #fafafa;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .violation.critical { border-color: var(--color-critical); }
+        .violation.serious { border-color: var(--color-serious); }
+        .violation.moderate { border-color: var(--color-moderate); }
+        .violation.minor { border-color: var(--color-minor); }
+
+        .violation h3 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        .violation .meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .violation .tag {
+            font-size: 0.8rem;
+            padding: 3px 10px;
+            border-radius: 4px;
+            background: #e9ecef;
+        }
+
+        .violation .tag.impact {
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .violation.critical .tag.impact { background: var(--color-critical); }
+        .violation.serious .tag.impact { background: var(--color-serious); }
+        .violation.moderate .tag.impact { background: var(--color-moderate); color: #333; }
+        .violation.minor .tag.impact { background: var(--color-minor); }
+
+        .violation .help {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .violation .learn-more {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .violation .learn-more:hover {
+            text-decoration: underline;
+        }
+
+        .violation .instances {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+
+        .violation .instances h4 {
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .instance {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .instance code {
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #d63384;
+        }
+
+        .instance pre {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            margin: 10px 0;
+            border: 1px solid #e9ecef;
+        }
+
+        .instance .fix {
+            color: var(--color-pass);
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        /* Tools Section */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .tool-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tool-card .name {
+            font-weight: 600;
+        }
+
+        .tool-card .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .tool-card .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .tool-card .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .score-section {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header {
+                padding: 25px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .container {
+                max-width: none;
+            }
+
+            .header {
+                background: #333;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .section {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>WCAG Accessibility Report</h1>
+            <p class="url">https://www.britishairways.com/</p>
+            <div class="meta">
+                <span>Scanned: 2026-01-10 20:56 UTC</span>
+                <span>Duration: 20.0s</span>
+                <span>WCAG 2.2</span>
+            </div>
+        </header>
+
+        <div class="score-section">
+            <div class="score-card">
+                
+                <div class="score good">
+                    83
+                </div>
+                <div class="label">Overall Score</div>
+            </div>
+
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="value">13</div>
+                    <div class="label">Total Violations</div>
+                </div>
+                <div class="summary-card critical">
+                    <div class="value">0</div>
+                    <div class="label">Critical</div>
+                </div>
+                <div class="summary-card serious">
+                    <div class="value">3</div>
+                    <div class="label">Serious</div>
+                </div>
+                <div class="summary-card moderate">
+                    <div class="value">4</div>
+                    <div class="label">Moderate</div>
+                </div>
+                <div class="summary-card minor">
+                    <div class="value">6</div>
+                    <div class="label">Minor</div>
+                </div>
+                <div class="summary-card passes">
+                    <div class="value">78</div>
+                    <div class="label">Passes</div>
+                </div>
+            </div>
+        </div>
+
+        <section class="section">
+            <h2>Violations (13)</h2>
+
+            
+                
+                <div class="violation serious">
+                    <h3>Duplicate id attribute value &#34;sale-offer-hero-variant-cta-button&#34; found on the web page.</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 4.1, 4.1.1</span>
+                        
+                        <span class="tag">pa11y</span>
+                    </div>
+
+                    
+                    <p class="help">Duplicate id attribute value &#34;text-custom&#34; found on the web page.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (6)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>#text-custom</code>
+                            
+                            
+                            <pre>&lt;span class=&#34;ds-cr-font-open-sans ds-cr-text-body ds-cr-text-base ds-cr-text-white-white ds-cr-font-light&#34; data-testid=&#34;header-mobile-menu-title&#34; id=&#34;text-custom&#34; data-ds-cr-name=&#34;TextCustom&#34;&gt;Menu&lt;/span&gt;</pre>
+                            
+                            
+                            <p class="fix">Duplicate id attribute value &#34;text-custom&#34; found on the web page.</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>#hero-title</code>
+                            
+                            
+                            <pre>&lt;span class=&#34;font-mylius-modern text-4xl font-light text-white lg:text-[56px] leading-[48px] md:leading-[68px] tracking-[0.432px] md:tracking-[0.672px]&#34; id=&#34;hero-title&#34;&gt;Sale now on&lt;/span&gt;</pre>
+                            
+                            
+                            <p class="fix">Duplicate id attribute value &#34;hero-title&#34; found on the web page.</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>#sale-offer-hero-variant-cta-button</code>
+                            
+                            
+                            <pre>&lt;a href=&#34;/content/en/in/offers&#34; id=&#34;sale-offer-hero-variant-cta-button&#34; tabindex=&#34;-1&#34; class=&#34;theme-default ds-cr-bg-theme-link-primary-default ds-cr-group ds-cr-inline-flex ds-cr-items-center ds-cr-text-theme-link-primary-default ds-cr-underline ds-c...</pre>
+                            
+                            
+                            <p class="fix">Duplicate id attribute value &#34;sale-offer-hero-variant-cta-button&#34; found on the web page.</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>#tab-0</code>
+                            
+                            
+                            <pre>&lt;a href=&#34;https://www.britishairways.com/travel/book/public/en_in/flightSearch&#34; data-testid=&#34;tab-0--link&#34; id=&#34;tab-0&#34; iconcolor=&#34;blue500&#34; class=&#34;theme-default ds-cr-bg-theme-link-primary-default ds-cr-group ds-cr-inline-flex ds-cr-items-center ds-cr-te...</pre>
+                            
+                            
+                            <p class="fix">Duplicate id attribute value &#34;tab-0&#34; found on the web page.</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>#tab-1</code>
+                            
+                            
+                            <pre>&lt;a href=&#34;https://www.britishairways.com/content/en/in/holidays/holiday-types/fly-drive-holidays?saleoption=CO&#34; data-testid=&#34;tab-1--link&#34; id=&#34;tab-1&#34; iconcolor=&#34;blue500&#34; class=&#34;theme-default ds-cr-bg-theme-link-primary-default ds-cr-group ds-cr-inline-...</pre>
+                            
+                            
+                            <p class="fix">Duplicate id attribute value &#34;tab-1&#34; found on the web page.</p>
+                            
+                        </div>
+                        
+                        
+                        <p style="color: #666; font-style: italic;">
+                            ... and 1 more instances
+                        </p>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>`&lt;html&gt;` element does not have a `[lang]` attribute</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 3.1.1</span>
+                        
+                        <span class="tag">axe, lighthouse, html_validator</span>
+                    </div>
+
+                    
+                    <p class="help">&lt;html&gt; element must have a lang attribute</p>
+                    
+
+                    
+                    <a href="https://dequeuniversity.com/rules/axe/4.8/html-has-lang?application=axeAPI" target="_blank" class="learn-more">Learn more →</a>
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>html</code>
+                            
+                            
+                            <pre>&lt;html xmlns=&#34;http://www.w3.org/1999/xhtml&#34;&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  The &lt;html&gt; element does not have a lang attribute</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation serious">
+                    <h3>This element has insufficient contrast at this conformance level. Expected a contrast ratio of at least 4.5:1, but text in this element has a contrast ratio of 2.67:1. Recommendation:  change background to #910e00.</h3>
+                    <div class="meta">
+                        <span class="tag impact">serious</span>
+                        
+                        <span class="tag">WCAG: 1.4, 1.4.3</span>
+                        
+                        <span class="tag">pa11y</span>
+                    </div>
+
+                    
+                    <p class="help">This element has insufficient contrast at this conformance level. Expected a contrast ratio of at least 4.5:1, but text in this element has a contrast ratio of 2.67:1. Recommendation:  change background to #910e00.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>#text-custom</code>
+                            
+                            
+                            <pre>&lt;p class=&#34;ds-cr-font-mylius-modern ds-cr-text-xs ds-cr-text-white-white&#34; data-testid=&#34;text-custom--text-custom&#34; id=&#34;text-custom&#34; data-ds-cr-name=&#34;TextCustom&#34;&gt;Return, from Mumbai, Mar 2026&lt;/p&gt;</pre>
+                            
+                            
+                            <p class="fix">This element has insufficient contrast at this conformance level. Expected a contrast ratio of at least 4.5:1, but text in this element has a contrast ratio of 2.67:1. Recommendation:  change background to #910e00.</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation moderate">
+                    <h3>Ensures all page content is contained by landmarks</h3>
+                    <div class="meta">
+                        <span class="tag impact">moderate</span>
+                        
+                        <span class="tag">axe</span>
+                    </div>
+
+                    
+                    <p class="help">All page content should be contained by landmarks</p>
+                    
+
+                    
+                    <a href="https://dequeuniversity.com/rules/axe/4.8/region?application=axeAPI" target="_blank" class="learn-more">Learn more →</a>
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (2)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>img</code>
+                            
+                            
+                            <pre>&lt;img class=&#34;logo&#34; src=&#34;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASIAAAAjCAMAAAAHS/eVAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Some page content is not contained by landmarks</p>
+                            
+                        </div>
+                        
+                        <div class="instance">
+                            
+                            <code>div</code>
+                            
+                            
+                            <pre>&lt;div class=&#34;languages&#34;&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix any of the following:
+  Some page content is not contained by landmarks</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation moderate">
+                    <h3>Ensures the document has a main landmark</h3>
+                    <div class="meta">
+                        <span class="tag impact">moderate</span>
+                        
+                        <span class="tag">axe, lighthouse</span>
+                    </div>
+
+                    
+                    <p class="help">Document should have one main landmark</p>
+                    
+
+                    
+                    <a href="https://dequeuniversity.com/rules/axe/4.8/landmark-one-main?application=axeAPI" target="_blank" class="learn-more">Learn more →</a>
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>html</code>
+                            
+                            
+                            <pre>&lt;html xmlns=&#34;http://www.w3.org/1999/xhtml&#34;&gt;</pre>
+                            
+                            
+                            <p class="fix">Fix all of the following:
+  Document does not have a main landmark</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation moderate">
+                    <h3>Page should have a &lt;main&gt; landmark</h3>
+                    <div class="meta">
+                        <span class="tag impact">moderate</span>
+                        
+                        <span class="tag">WCAG: 1.3.1</span>
+                        
+                        <span class="tag">html_validator</span>
+                    </div>
+
+                    
+                    <p class="help">Add a &lt;main&gt; element to contain the primary content.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>body</code>
+                            
+                            
+                            
+                            <p class="fix">Wrap main content in &lt;main&gt; element</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation moderate">
+                    <h3>Page should have a skip navigation link</h3>
+                    <div class="meta">
+                        <span class="tag impact">moderate</span>
+                        
+                        <span class="tag">WCAG: 2.4.1</span>
+                        
+                        <span class="tag">html_validator</span>
+                    </div>
+
+                    
+                    <p class="help">Add a &#39;Skip to main content&#39; link as the first focusable element.</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>body &gt; a:first-of-type</code>
+                            
+                            
+                            
+                            <p class="fix">Add &lt;a href=&#39;#main-content&#39;&gt;Skip to main content&lt;/a&gt; at the start of the page</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation minor">
+                    <h3>Missing meta description</h3>
+                    <div class="meta">
+                        <span class="tag impact">minor</span>
+                        
+                        <span class="tag">seo</span>
+                    </div>
+
+                    
+                    <p class="help">Add &lt;meta name=&#39;description&#39; content=&#39;...&#39;&gt;</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>head</code>
+                            
+                            
+                            <pre>&lt;head&gt;...&lt;/head&gt;</pre>
+                            
+                            
+                            <p class="fix">Add meta description for search engines and screen readers</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation minor">
+                    <h3>Missing canonical URL</h3>
+                    <div class="meta">
+                        <span class="tag impact">minor</span>
+                        
+                        <span class="tag">seo</span>
+                    </div>
+
+                    
+                    <p class="help">Add &lt;link rel=&#39;canonical&#39; href=&#39;...&#39;&gt;</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>head</code>
+                            
+                            
+                            <pre>&lt;head&gt;...&lt;/head&gt;</pre>
+                            
+                            
+                            <p class="fix">Add canonical link to prevent duplicate content issues</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation minor">
+                    <h3>Missing Open Graph tags: og:title, og:description, og:image</h3>
+                    <div class="meta">
+                        <span class="tag impact">minor</span>
+                        
+                        <span class="tag">seo</span>
+                    </div>
+
+                    
+                    <p class="help">Add Open Graph meta tags for social sharing</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>head</code>
+                            
+                            
+                            <pre>&lt;head&gt;...&lt;/head&gt;</pre>
+                            
+                            
+                            <p class="fix">Add og:title, og:description, og:image meta tags</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation minor">
+                    <h3>Missing Twitter Card meta tag</h3>
+                    <div class="meta">
+                        <span class="tag impact">minor</span>
+                        
+                        <span class="tag">seo</span>
+                    </div>
+
+                    
+                    <p class="help">Add &lt;meta name=&#39;twitter:card&#39; content=&#39;summary_large_image&#39;&gt;</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>head</code>
+                            
+                            
+                            <pre>&lt;head&gt;...&lt;/head&gt;</pre>
+                            
+                            
+                            <p class="fix">Add Twitter Card meta tags for social sharing</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation minor">
+                    <h3>No structured data found (JSON-LD or microdata)</h3>
+                    <div class="meta">
+                        <span class="tag impact">minor</span>
+                        
+                        <span class="tag">seo</span>
+                    </div>
+
+                    
+                    <p class="help">Add structured data for better search engine understanding</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>head</code>
+                            
+                            
+                            
+                            <p class="fix">Add JSON-LD structured data (Organization, WebPage, etc.)</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="violation minor">
+                    <h3>Page is set to noindex</h3>
+                    <div class="meta">
+                        <span class="tag impact">minor</span>
+                        
+                        <span class="tag">seo</span>
+                    </div>
+
+                    
+                    <p class="help">This page will not appear in search results</p>
+                    
+
+                    
+
+                    
+                    <div class="instances">
+                        <h4>Affected Elements (1)</h4>
+                        
+                        <div class="instance">
+                            
+                            <code>meta[name=&#39;robots&#39;]</code>
+                            
+                            
+                            <pre>&lt;meta content=&#34;noindex&#34; name=&#34;robots&#34;/&gt;</pre>
+                            
+                            
+                            <p class="fix">Remove noindex if this page should be indexed</p>
+                            
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>
+                
+            
+        </section>
+
+        <section class="section">
+            <h2>Tools Used</h2>
+            <div class="tools-grid">
+                
+                <div class="tool-card">
+                    <span class="name">axe</span>
+                    <span class="status success">
+                        success
+                         (6707ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">pa11y</span>
+                    <span class="status success">
+                        success
+                         (11508ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">lighthouse</span>
+                    <span class="status success">
+                        success
+                         (19234ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">html_validator</span>
+                    <span class="status success">
+                        success
+                         (6287ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">contrast</span>
+                    <span class="status success">
+                        success
+                         (6063ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">keyboard</span>
+                    <span class="status success">
+                        success
+                         (6368ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">aria</span>
+                    <span class="status success">
+                        success
+                         (6305ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">seo</span>
+                    <span class="status success">
+                        success
+                         (6203ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">forms</span>
+                    <span class="status success">
+                        success
+                         (6297ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">link_text</span>
+                    <span class="status success">
+                        success
+                         (6036ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">image_alt</span>
+                    <span class="status success">
+                        success
+                         (6352ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">media</span>
+                    <span class="status success">
+                        success
+                         (6039ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">touch_target</span>
+                    <span class="status success">
+                        success
+                         (6217ms)
+                    </span>
+                </div>
+                
+                <div class="tool-card">
+                    <span class="name">readability</span>
+                    <span class="status success">
+                        success
+                         (6317ms)
+                    </span>
+                </div>
+                
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Manual Testing Required</h2>
+            <p style="color: #666; margin-bottom: 15px;">
+                The following WCAG criteria require manual testing for full compliance verification:
+            </p>
+            <ul style="padding-left: 20px;">
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.1.1</strong> - Non-text Content
+                    <br><span style="color: #888; font-size: 0.9rem;">Alt text quality requires human review to verify accuracy</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.2.1</strong> - Audio-only and Video-only (Prerecorded)
+                    <br><span style="color: #888; font-size: 0.9rem;">Audio/video content requires manual review</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.2.2</strong> - Captions (Prerecorded)
+                    <br><span style="color: #888; font-size: 0.9rem;">Caption quality and accuracy requires manual review</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.2.3</strong> - Audio Description or Media Alternative (Prerecorded)
+                    <br><span style="color: #888; font-size: 0.9rem;">Audio description accuracy requires manual review</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.2.4</strong> - Captions (Live)
+                    <br><span style="color: #888; font-size: 0.9rem;">Live caption quality requires manual review</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.2.5</strong> - Audio Description (Prerecorded)
+                    <br><span style="color: #888; font-size: 0.9rem;">Audio description completeness requires manual review</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.3.2</strong> - Meaningful Sequence
+                    <br><span style="color: #888; font-size: 0.9rem;">Meaningful sequence requires contextual understanding</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>1.3.3</strong> - Sensory Characteristics
+                    <br><span style="color: #888; font-size: 0.9rem;">Sensory characteristics usage requires manual review</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>2.1.1</strong> - Keyboard
+                    <br><span style="color: #888; font-size: 0.9rem;">Full keyboard accessibility requires manual testing</span>
+                </li>
+                
+                <li style="margin-bottom: 8px;">
+                    <strong>2.4.4</strong> - Link Purpose (In Context)
+                    <br><span style="color: #888; font-size: 0.9rem;">Link purpose in context requires manual review</span>
+                </li>
+                
+            </ul>
+        </section>
+
+        <footer class="footer">
+            <p>Generated by WCAG Accessibility Scanner v1.0.0</p>
+            <p>Report generated: 2026-01-10 20:57 UTC</p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -61,6 +61,55 @@ class BrowserManager:
 
         logger.info("Browser stopped")
 
+    async def _handle_cookie_popups(self, page: Page) -> None:
+        """
+        Try to automatically accept or dismiss common cookie consent popups.
+
+        Args:
+            page: The Playwright page instance
+        """
+        # Common selectors for cookie consent buttons (Accept/Allow/OK)
+        cookie_selectors = [
+            # Generic patterns
+            'button:has-text("Accept")',
+            'button:has-text("Accept All")',
+            'button:has-text("Allow")',
+            'button:has-text("Allow All")',
+            'button:has-text("I Agree")',
+            'button:has-text("OK")',
+            'button:has-text("Got it")',
+            'a:has-text("Accept")',
+            'a:has-text("I Agree")',
+            # ID patterns
+            '#accept-cookies',
+            '#cookie-accept',
+            '#acceptAll',
+            '[id*="accept"][id*="cookie"]',
+            # Class patterns
+            '.accept-cookies',
+            '.cookie-accept',
+            '[class*="accept"][class*="cookie"]',
+            '[class*="cookie"][class*="accept"]',
+            # ARIA patterns
+            '[aria-label*="Accept"]',
+            '[aria-label*="Accept cookies"]',
+            '[aria-label*="Accept all"]',
+        ]
+
+        for selector in cookie_selectors:
+            try:
+                # Check if element exists and is visible
+                element = page.locator(selector).first
+                if await element.is_visible(timeout=1000):
+                    logger.info(f"Found cookie consent button with selector: {selector}")
+                    await element.click(timeout=2000)
+                    await asyncio.sleep(0.5)
+                    logger.info("Clicked cookie consent button")
+                    return
+            except Exception:
+                # Selector not found or not clickable, continue to next
+                continue
+
     @asynccontextmanager
     async def get_page(self, url: str, retries: int = 2) -> AsyncGenerator[Page, None]:
         """
@@ -112,7 +161,7 @@ class BrowserManager:
         last_error = None
 
         # Wait strategies to try in order (from fastest to most complete)
-        wait_strategies = ["domcontentloaded", "load", "networkidle"]
+        wait_strategies = ["commit", "domcontentloaded", "load", "networkidle"]
 
         try:
             for attempt in range(retries + 1):
@@ -126,6 +175,10 @@ class BrowserManager:
                         )
                         # Wait a bit for dynamic content
                         await asyncio.sleep(1.5)
+
+                        # Try to handle cookie consent popups
+                        await self._handle_cookie_popups(page)
+
                         yield page
                         return
                     except PlaywrightError as e:

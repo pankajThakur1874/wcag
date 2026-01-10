@@ -1,86 +1,75 @@
-"""Test site-wide scanning."""
+"""
+Test script to demonstrate site-wide WCAG scanning.
+
+This script shows how to use the built-in site scanner to:
+1. Crawl all pages on a website
+2. Scan each discovered page with all 14 scanners
+3. Generate comprehensive reports with aggregated violations
+"""
 
 import asyncio
-import sys
-import os
+import json
+from src.core import SiteScanner
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+async def scan_entire_website():
+    """Scan an entire website and generate comprehensive report."""
 
-from src.core.site_scanner import SiteScanner
-
-
-async def main():
-    url = "https://www.ascendons.in/"
-
-    print(f"\n{'='*60}")
-    print(f"Site-Wide WCAG Scan: {url}")
-    print(f"{'='*60}\n")
-
+    # Configure the site scanner
     scanner = SiteScanner(
-        max_pages=10,  # Limit to 10 pages for testing
-        max_depth=2,
-        tools=["axe", "html_validator", "contrast", "aria", "forms"],
-        concurrent_scans=2
+        max_pages=50,        # Maximum number of pages to scan
+        max_depth=3,         # How deep to crawl (0 = only homepage)
+        tools=None,          # None = use all 14 scanners
+        concurrent_scans=3   # Scan 3 pages at a time for speed
     )
 
-    def progress_callback(phase, current, total, message):
-        print(f"[{phase.upper()}] ({current}/{total}) {message}")
+    # Optional: Set up progress callback to monitor progress
+    def on_progress(phase, current, total, message):
+        print(f"[{phase.upper()}] {current}/{total}: {message}")
 
-    scanner.set_progress_callback(progress_callback)
+    scanner.set_progress_callback(on_progress)
 
-    result = await scanner.scan_site(url)
+    # Run the scan
+    print("Starting site-wide scan...")
+    result = await scanner.scan_site("https://www.britishairways.com/")
 
-    print(f"\n{'='*60}")
-    print("SCAN RESULTS")
-    print(f"{'='*60}")
-    print(f"Status: {result.status.value}")
+    # Print summary
+    print("\n" + "="*80)
+    print("SCAN COMPLETE")
+    print("="*80)
+    print(f"Website: {result.base_url}")
     print(f"Duration: {result.duration_seconds}s")
     print(f"Pages discovered: {result.pages_discovered}")
     print(f"Pages scanned: {result.pages_scanned}")
     print(f"Pages failed: {result.pages_failed}")
-    print(f"\nOverall Score: {result.overall_score}%")
+    print(f"Overall score: {result.overall_score}%")
     print(f"Total rules checked: {result.total_rules_checked}")
     print(f"Total rules passed: {result.total_rules_passed}")
     print(f"Total rules failed: {result.total_rules_failed}")
-
-    print(f"\n{'='*60}")
-    print("PAGE RESULTS")
-    print(f"{'='*60}")
-    for page in result.page_results:
-        status_icon = "✓" if page.status == "completed" else "✗"
-        print(f"{status_icon} {page.url}")
-        print(f"   Score: {page.score}% | Violations: {page.violations_count} | Tests: {page.rules_passed}/{page.rules_checked}")
-
-    print(f"\n{'='*60}")
-    print("VIOLATIONS SUMMARY")
-    print(f"{'='*60}")
-    print(f"Total violations (all pages): {len(result.all_violations)}")
     print(f"Unique violations: {len(result.unique_violations)}")
+    print(f"Total violation instances: {len(result.all_violations)}")
 
-    if result.summary:
-        print(f"\nBy Impact:")
-        for impact, count in result.summary.get("by_impact", {}).items():
-            print(f"  - {impact}: {count}")
+    # Show violations by impact
+    print("\nViolations by Impact:")
+    for impact, count in result.summary["by_impact"].items():
+        print(f"  {impact.capitalize()}: {count}")
 
-        print(f"\nWorst Pages:")
-        for page in result.summary.get("worst_pages", [])[:3]:
-            print(f"  - {page['url']}: {page['violations']} violations (score: {page['score']}%)")
+    # Show worst pages
+    print("\nPages with Most Issues:")
+    for page in result.summary["worst_pages"]:
+        print(f"  {page['url']}: {page['violations']} violations (Score: {page['score']}%)")
 
-    print(f"\n{'='*60}")
-    print("TOP VIOLATIONS (by frequency)")
-    print(f"{'='*60}")
-    # Count violations by rule_id
-    violation_counts = {}
-    for v in result.all_violations:
-        if v.rule_id not in violation_counts:
-            violation_counts[v.rule_id] = {"count": 0, "desc": v.description, "impact": v.impact.value}
-        violation_counts[v.rule_id]["count"] += 1
+    # Show best pages
+    print("\nBest Performing Pages:")
+    for page in result.summary["best_pages"]:
+        print(f"  {page['url']}: {page['violations']} violations (Score: {page['score']}%)")
 
-    sorted_violations = sorted(violation_counts.items(), key=lambda x: x[1]["count"], reverse=True)
-    for rule_id, data in sorted_violations[:10]:
-        print(f"  [{data['impact'].upper()}] {rule_id}: {data['count']} occurrences")
-        print(f"      {data['desc'][:80]}...")
+    # Save detailed JSON report
+    with open("site_wide_report.json", "w") as f:
+        json.dump(result.to_dict(), f, indent=2, default=str)
 
+    print(f"\nDetailed report saved to: site_wide_report.json")
+
+    return result
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(scan_entire_website())
