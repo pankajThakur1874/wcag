@@ -1,0 +1,14 @@
+{
+  "summary": {
+    "total_files": 1,
+    "average_score": 92.8,
+    "total_violations": 9
+  },
+  "results": [
+    {
+      "file": "index.html",
+      "score": 92.8,
+      "violations": 9
+    }
+  ]
+}

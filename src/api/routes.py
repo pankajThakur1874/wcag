@@ -4,7 +4,7 @@ from typing import Optional
 from uuid import uuid4
 import asyncio
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, HttpUrl, Field
 
@@ -21,6 +21,7 @@ router = APIRouter(prefix="/api/v1", tags=["scans"])
 _scan_results: dict[str, ScanResult] = {}
 _scan_tasks: dict[str, asyncio.Task] = {}
 _site_scan_results: dict[str, dict] = {}  # Site-wide scan results
+_fetch_sessions: dict[str, dict] = {}  # Fetch-first sessions
 
 
 class ScanRequest(BaseModel):
@@ -583,4 +584,218 @@ async def scan_uploaded_file(
         scan_id=scan_id,
         status="pending",
         message=f"Scanning uploaded file: {file.filename}"
+    )
+
+
+# ===== FETCH-FIRST ENDPOINTS =====
+
+class FetchHtmlRequest(BaseModel):
+    """Request model for fetching HTML."""
+    urls: list[str] = Field(..., description="List of URLs to fetch HTML from")
+
+
+class FetchHtmlResponse(BaseModel):
+    """Response model for fetch HTML initiation."""
+    session_id: str
+    status: str
+    message: str
+
+
+class ScanSavedHtmlRequest(BaseModel):
+    """Request model for scanning saved HTML files."""
+    session_id: str = Field(..., description="Session ID from fetch operation")
+    tools: Optional[list[str]] = Field(None, description="Tools to use (default: all)")
+
+
+@router.post("/fetch-html", response_model=FetchHtmlResponse)
+async def fetch_html(
+    request: FetchHtmlRequest,
+    background_tasks: BackgroundTasks
+) -> FetchHtmlResponse:
+    """
+    Start fetching HTML from multiple URLs (Phase 1 of fetch-first workflow).
+
+    Returns a session_id that can be used to check status and scan the files.
+    """
+    from src.core.html_fetcher import HTMLFetcher
+    from pathlib import Path
+
+    session_id = str(uuid4())
+
+    # Create session storage
+    _fetch_sessions[session_id] = {
+        "session_id": session_id,
+        "urls": request.urls,
+        "status": "pending",
+        "progress": {"current": 0, "total": len(request.urls), "message": "Starting..."},
+        "files": [],
+        "output_dir": None
+    }
+
+    # Run fetch in background
+    async def _run_fetch():
+        try:
+            _fetch_sessions[session_id]["status"] = "running"
+            _fetch_sessions[session_id]["progress"]["message"] = "Fetching HTML from URLs..."
+
+            # Create HTML fetcher
+            output_dir = f"html_cache_{session_id}"
+            fetcher = HTMLFetcher(output_dir=output_dir)
+            _fetch_sessions[session_id]["output_dir"] = str(fetcher.output_dir)
+
+            # Fetch all URLs (sequential for better bot protection bypass)
+            results = await fetcher.fetch_multiple(request.urls, use_browser=True)
+
+            # Update session with results
+            files = []
+            for i, (url, filepath) in enumerate(results.items(), 1):
+                status = "success" if filepath else "failed"
+                filename = Path(filepath).name if filepath else f"failed_{i}.html"
+                files.append({
+                    "url": url,
+                    "filename": filename,
+                    "filepath": filepath,
+                    "status": status
+                })
+
+                # Update progress
+                _fetch_sessions[session_id]["progress"]["current"] = i
+                _fetch_sessions[session_id]["progress"]["message"] = f"Fetched {i}/{len(request.urls)} URLs"
+                _fetch_sessions[session_id]["files"] = files
+
+            _fetch_sessions[session_id]["status"] = "completed"
+            _fetch_sessions[session_id]["files"] = files
+            logger.info(f"Fetch session {session_id} completed: {len([f for f in files if f['status'] == 'success'])}/{len(files)} successful")
+
+        except Exception as e:
+            logger.error(f"Fetch session {session_id} failed: {e}")
+            _fetch_sessions[session_id]["status"] = "failed"
+            _fetch_sessions[session_id]["error"] = str(e)
+
+    # Schedule background task
+    asyncio.create_task(_run_fetch())
+
+    return FetchHtmlResponse(
+        session_id=session_id,
+        status="pending",
+        message=f"Fetching HTML from {len(request.urls)} URLs..."
+    )
+
+
+@router.get("/fetch-html/{session_id}")
+async def get_fetch_status(session_id: str):
+    """Get status of HTML fetching operation."""
+    if session_id not in _fetch_sessions:
+        raise HTTPException(status_code=404, detail="Fetch session not found")
+
+    return _fetch_sessions[session_id]
+
+
+@router.post("/scan-saved-html", response_model=ScanResponse)
+async def scan_saved_html(
+    request: ScanSavedHtmlRequest,
+    background_tasks: BackgroundTasks
+) -> ScanResponse:
+    """
+    Scan previously fetched HTML files (Phase 2 of fetch-first workflow).
+
+    Uses the session_id from a previous fetch-html operation to scan all saved HTML files.
+    """
+    # Validate session exists
+    if request.session_id not in _fetch_sessions:
+        raise HTTPException(status_code=404, detail="Fetch session not found")
+
+    fetch_session = _fetch_sessions[request.session_id]
+
+    if fetch_session["status"] != "completed":
+        raise HTTPException(status_code=400, detail=f"Fetch session not completed (status: {fetch_session['status']})")
+
+    # Get successful files
+    successful_files = [f for f in fetch_session["files"] if f["status"] == "success" and f["filepath"]]
+
+    if not successful_files:
+        raise HTTPException(status_code=400, detail="No successfully fetched HTML files to scan")
+
+    # Validate tools
+    if request.tools:
+        invalid_tools = set(request.tools) - set(SCANNERS.keys())
+        if invalid_tools:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid tools: {invalid_tools}. Available: {list(SCANNERS.keys())}"
+            )
+
+    scan_id = str(uuid4())
+
+    # Create a site-wide scan result for batch scanning
+    _site_scan_results[scan_id] = {
+        "scan_id": scan_id,
+        "base_url": f"Fetch-first session: {request.session_id}",
+        "status": "pending",
+        "progress": {"phase": "scanning", "current": 0, "total": len(successful_files), "message": "Starting scan..."},
+        "result": None,
+        "site_wide": True
+    }
+
+    # Run batch scan in background
+    async def _run_batch_scan():
+        try:
+            _site_scan_results[scan_id]["status"] = "running"
+
+            from pathlib import Path
+
+            # Scan all files
+            aggregator = ResultsAggregator(tools=request.tools)
+            page_results = []
+            all_violations = []
+
+            for i, file_info in enumerate(successful_files, 1):
+                _site_scan_results[scan_id]["progress"]["current"] = i
+                _site_scan_results[scan_id]["progress"]["message"] = f"Scanning {file_info['filename']}..."
+
+                # Create file:// URL
+                file_path = Path(file_info['filepath'])
+                file_url = file_path.absolute().as_uri()
+
+                try:
+                    result = await aggregator.scan(file_url)
+
+                    page_results.append({
+                        "url": file_info["url"],
+                        "filename": file_info["filename"],
+                        "score": result.scores.overall,
+                        "violations_count": result.summary.total_violations
+                    })
+
+                    all_violations.extend(result.violations)
+
+                except Exception as e:
+                    logger.error(f"Failed to scan {file_info['filename']}: {e}")
+
+            # Create site scan result
+            site_result = SiteScanResult(
+                scan_id=scan_id,
+                base_url=f"Fetch-first session: {request.session_id}",
+                pages_scanned=len(page_results),
+                page_results=page_results,
+                violations=all_violations,
+                tools_used=request.tools or list(SCANNERS.keys())
+            )
+
+            _site_scan_results[scan_id]["result"] = site_result
+            _site_scan_results[scan_id]["status"] = "completed"
+            logger.info(f"Batch scan {scan_id} completed: {len(page_results)} files scanned")
+
+        except Exception as e:
+            logger.error(f"Batch scan {scan_id} failed: {e}")
+            _site_scan_results[scan_id]["status"] = "failed"
+            _site_scan_results[scan_id]["error"] = str(e)
+
+    # Schedule background task
+    asyncio.create_task(_run_batch_scan())
+
+    return ScanResponse(
+        scan_id=scan_id,
+        status="pending",
+        message=f"Scanning {len(successful_files)} HTML files..."
     )

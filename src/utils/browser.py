@@ -29,25 +29,50 @@ class BrowserManager:
         if self._browser is not None:
             return
 
-        logger.info("Starting browser...")
+        logger.info("Starting browser with anti-detection...")
         self._playwright = await async_playwright().start()
-        self._browser = await self._playwright.chromium.launch(
-            headless=self._config.browser.headless,
-            args=[
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-blink-features=AutomationControlled',
-                '--disable-web-security',
-                '--disable-features=VizDisplayCompositor',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--disable-gpu',
-                '--window-size=1920,1080',
-                '--disable-http2',  # Force HTTP/1.1
-                '--enable-features=NetworkService,NetworkServiceInProcess',
-            ]
-        )
-        logger.info("Browser started successfully")
+
+        # Try Firefox first (better for some bot protections)
+        try:
+            self._browser = await self._playwright.firefox.launch(
+                headless=False,  # Non-headless for better success rate
+                firefox_user_prefs={
+                    "dom.webdriver.enabled": False,
+                    "useAutomationExtension": False,
+                    "general.platform.override": "MacIntel",
+                    "general.useragent.override": USER_AGENT,
+                }
+            )
+            logger.info("Firefox browser started successfully")
+        except Exception as e:
+            logger.warning(f"Firefox failed, falling back to Chromium: {e}")
+            # Fallback to Chromium with aggressive anti-detection
+            self._browser = await self._playwright.chromium.launch(
+                headless=False,  # Non-headless is harder to detect
+                args=[
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-blink-features=AutomationControlled',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--disable-gpu',
+                    '--window-size=1920,1080',
+                    '--start-maximized',
+                    '--disable-extensions',
+                    '--disable-plugins-discovery',
+                    '--disable-default-apps',
+                    '--no-first-run',
+                    '--no-default-browser-check',
+                    '--disable-background-networking',
+                    '--disable-background-timer-throttling',
+                    '--disable-backgrounding-occluded-windows',
+                    '--disable-renderer-backgrounding',
+                    '--disable-hang-monitor',
+                    '--disable-ipc-flooding-protection',
+                    '--disable-prompt-on-repost',
+                ]
+            )
+            logger.info("Chromium browser started successfully")
 
     async def stop(self) -> None:
         """Stop the browser."""
@@ -129,7 +154,7 @@ class BrowserManager:
             viewport={"width": 1920, "height": 1080},
             user_agent=USER_AGENT,
             extra_http_headers={
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.9",
                 "Accept-Encoding": "gzip, deflate, br",
                 "Connection": "keep-alive",
@@ -138,46 +163,106 @@ class BrowserManager:
                 "Sec-Fetch-Mode": "navigate",
                 "Sec-Fetch-Site": "none",
                 "Sec-Fetch-User": "?1",
+                "Cache-Control": "max-age=0",
             },
             java_script_enabled=True,
             bypass_csp=True,
             ignore_https_errors=True,
+            locale="en-US",
+            timezone_id="America/New_York",
         )
 
         page = await context.new_page()
 
+        # Add JavaScript to mask automation signals
+        await page.add_init_script("""
+            // Override navigator.webdriver
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            });
+
+            // Override permissions
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                    Promise.resolve({ state: Notification.permission }) :
+                    originalQuery(parameters)
+            );
+
+            // Add realistic plugins
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [1, 2, 3, 4, 5]
+            });
+
+            // Override languages
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['en-US', 'en']
+            });
+        """)
+
         # Create stealth instance for bot detection evasion
         stealth = None
         if self._stealth_mode:
-            stealth = Stealth(
-                navigator_webdriver=True,
-                navigator_plugins=True,
-                navigator_permissions=True,
-                webgl_vendor=True,
-                chrome_runtime=True,
-            )
-            await stealth.apply_stealth_async(page)
+            try:
+                stealth = Stealth(
+                    navigator_webdriver=True,
+                    navigator_plugins=True,
+                    navigator_permissions=True,
+                    webgl_vendor=True,
+                    chrome_runtime=True,
+                )
+                await stealth.apply_stealth_async(page)
+            except Exception as e:
+                logger.warning(f"Stealth mode failed: {e}")
 
         last_error = None
 
         # Wait strategies to try in order (from fastest to most complete)
-        wait_strategies = ["commit", "domcontentloaded", "load", "networkidle"]
+        wait_strategies = ["load", "domcontentloaded", "networkidle"]
 
         try:
             for attempt in range(retries + 1):
                 for wait_strategy in wait_strategies:
                     try:
                         logger.debug(f"Navigating to {url} (attempt {attempt + 1}, wait: {wait_strategy})")
+
+                        # Navigate with longer timeout
                         await page.goto(
                             url,
                             wait_until=wait_strategy,
                             timeout=self._config.browser.timeout
                         )
-                        # Wait a bit for dynamic content
-                        await asyncio.sleep(1.5)
+
+                        # Wait for dynamic content
+                        await asyncio.sleep(3)
+
+                        # Simulate human-like behavior
+                        try:
+                            # Random scrolling
+                            await page.evaluate("""
+                                window.scrollTo({
+                                    top: Math.random() * 300,
+                                    behavior: 'smooth'
+                                });
+                            """)
+                            await asyncio.sleep(1)
+
+                            # Scroll back up
+                            await page.evaluate("window.scrollTo({ top: 0, behavior: 'smooth' });")
+                            await asyncio.sleep(0.5)
+
+                            # Random mouse movements
+                            await page.mouse.move(100 + int(asyncio.get_event_loop().time() % 100),
+                                                 100 + int(asyncio.get_event_loop().time() % 100))
+                            await asyncio.sleep(0.3)
+                        except Exception as e:
+                            logger.debug(f"Human simulation failed: {e}")
 
                         # Try to handle cookie consent popups
                         await self._handle_cookie_popups(page)
+
+                        # Final wait to let any anti-bot checks complete
+                        await asyncio.sleep(2)
 
                         yield page
                         return
