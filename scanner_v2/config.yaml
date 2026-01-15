@@ -1,0 +1,41 @@
+server:
+  host: 0.0.0.0
+  port: 8000
+  workers: 4
+  reload: true
+
+database:
+  mongodb_uri: ${MONGODB_URI:-mongodb://localhost:27017}
+  database_name: wcag_scanner
+
+queue:
+  worker_count: 5
+  max_queue_size: 1000
+  job_timeout: 300  # seconds
+
+scanning:
+  default_max_depth: 3
+  default_max_pages: 100
+  default_wait_time: 2000  # ms
+  default_wcag_level: "AA"
+  default_scanners:
+    - axe
+    - pa11y
+    - lighthouse
+  page_timeout: 30000  # ms
+  screenshot_enabled: true
+
+browser:
+  headless: true
+  timeout: 30000
+
+logging:
+  level: INFO
+  format: json
+
+security:
+  jwt_secret: ${JWT_SECRET:-change-this-secret-key-in-production}
+  jwt_expiry: 3600  # seconds
+  cors_origins:
+    - http://localhost:3000
+    - http://localhost:8000

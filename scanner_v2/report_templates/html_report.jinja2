@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="WCAG Accessibility Compliance Report">
+    <title>WCAG Compliance Report - {{ project.name }}</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        {{ inline_css }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="report-header">
+            <h1>WCAG Accessibility Compliance Report</h1>
+            <div class="report-meta">
+                <p><strong>Project:</strong> {{ project.name }}</p>
+                <p><strong>Base URL:</strong> <a href="{{ project.base_url }}" target="_blank">{{ project.base_url }}</a></p>
+                <p><strong>Scan Date:</strong> {{ scan.started_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                <p><strong>Report Generated:</strong> {{ generated_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                <p><strong>Scan ID:</strong> {{ scan.id }}</p>
+            </div>
+        </header>
+
+        <!-- Executive Summary -->
+        <section class="executive-summary">
+            <h2>Executive Summary</h2>
+
+            <div class="score-card">
+                <div class="score-main">
+                    <div class="score-circle score-{{ 'excellent' if scan.scores.overall >= 90 else 'good' if scan.scores.overall >= 70 else 'fair' if scan.scores.overall >= 50 else 'poor' }}">
+                        <span class="score-value">{{ scan.scores.overall|round(0)|int }}</span>
+                        <span class="score-label">Overall Score</span>
+                    </div>
+                </div>
+
+                <div class="score-breakdown">
+                    <h3>WCAG Principles</h3>
+                    <div class="principle-scores">
+                        <div class="principle-score">
+                            <span class="principle-name">Perceivable</span>
+                            <div class="score-bar">
+                                <div class="score-bar-fill" style="width: {{ scan.scores.by_principle.perceivable }}%"></div>
+                            </div>
+                            <span class="score-number">{{ scan.scores.by_principle.perceivable|round(0)|int }}%</span>
+                        </div>
+                        <div class="principle-score">
+                            <span class="principle-name">Operable</span>
+                            <div class="score-bar">
+                                <div class="score-bar-fill" style="width: {{ scan.scores.by_principle.operable }}%"></div>
+                            </div>
+                            <span class="score-number">{{ scan.scores.by_principle.operable|round(0)|int }}%</span>
+                        </div>
+                        <div class="principle-score">
+                            <span class="principle-name">Understandable</span>
+                            <div class="score-bar">
+                                <div class="score-bar-fill" style="width: {{ scan.scores.by_principle.understandable }}%"></div>
+                            </div>
+                            <span class="score-number">{{ scan.scores.by_principle.understandable|round(0)|int }}%</span>
+                        </div>
+                        <div class="principle-score">
+                            <span class="principle-name">Robust</span>
+                            <div class="score-bar">
+                                <div class="score-bar-fill" style="width: {{ scan.scores.by_principle.robust }}%"></div>
+                            </div>
+                            <span class="score-number">{{ scan.scores.by_principle.robust|round(0)|int }}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <div class="stat-value">{{ scan.progress.total_pages }}</div>
+                    <div class="stat-label">Pages Scanned</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ scan.summary.total_issues }}</div>
+                    <div class="stat-label">Total Issues</div>
+                </div>
+                <div class="stat-card stat-critical">
+                    <div class="stat-value">{{ scan.summary.by_impact.critical }}</div>
+                    <div class="stat-label">Critical</div>
+                </div>
+                <div class="stat-card stat-serious">
+                    <div class="stat-value">{{ scan.summary.by_impact.serious }}</div>
+                    <div class="stat-label">Serious</div>
+                </div>
+                <div class="stat-card stat-moderate">
+                    <div class="stat-value">{{ scan.summary.by_impact.moderate }}</div>
+                    <div class="stat-label">Moderate</div>
+                </div>
+                <div class="stat-card stat-minor">
+                    <div class="stat-value">{{ scan.summary.by_impact.minor }}</div>
+                    <div class="stat-label">Minor</div>
+                </div>
+            </div>
+
+            <div class="wcag-compliance">
+                <h3>WCAG Level Compliance</h3>
+                <div class="compliance-levels">
+                    <div class="compliance-level">
+                        <span class="level-badge level-a">Level A</span>
+                        <span class="issue-count">{{ scan.summary.by_wcag_level.A }} issues</span>
+                    </div>
+                    <div class="compliance-level">
+                        <span class="level-badge level-aa">Level AA</span>
+                        <span class="issue-count">{{ scan.summary.by_wcag_level.AA }} issues</span>
+                    </div>
+                    <div class="compliance-level">
+                        <span class="level-badge level-aaa">Level AAA</span>
+                        <span class="issue-count">{{ scan.summary.by_wcag_level.AAA }} issues</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Issues by Impact -->
+        <section class="issues-section">
+            <h2>Issues by Impact Level</h2>
+
+            <div class="filter-controls">
+                <button class="filter-btn active" data-filter="all">All Issues</button>
+                <button class="filter-btn" data-filter="critical">Critical</button>
+                <button class="filter-btn" data-filter="serious">Serious</button>
+                <button class="filter-btn" data-filter="moderate">Moderate</button>
+                <button class="filter-btn" data-filter="minor">Minor</button>
+            </div>
+
+            {% for impact in ['critical', 'serious', 'moderate', 'minor'] %}
+            {% set impact_issues = issues_by_impact.get(impact, []) %}
+            {% if impact_issues %}
+            <div class="impact-group" data-impact="{{ impact }}">
+                <h3 class="impact-heading impact-{{ impact }}">
+                    {{ impact|title }} Issues ({{ impact_issues|length }})
+                </h3>
+
+                <div class="issues-list">
+                    {% for issue in impact_issues %}
+                    <div class="issue-card">
+                        <div class="issue-header">
+                            <span class="issue-impact impact-{{ issue.impact }}">{{ issue.impact|upper }}</span>
+                            <span class="issue-wcag">
+                                {% for criterion in issue.wcag_criteria %}
+                                <span class="wcag-badge">{{ criterion }}</span>
+                                {% endfor %}
+                            </span>
+                        </div>
+
+                        <h4 class="issue-title">{{ issue.description }}</h4>
+
+                        <div class="issue-details">
+                            <p><strong>Rule ID:</strong> {{ issue.rule_id }}</p>
+                            <p><strong>WCAG Principle:</strong> {{ issue.principle|title }}</p>
+                            <p><strong>Detected by:</strong> {{ issue.detected_by|join(', ') }}</p>
+                            <p><strong>Instances:</strong> {{ issue.instances|length }} occurrence(s)</p>
+                        </div>
+
+                        <div class="issue-help">
+                            <p>{{ issue.help_text }}</p>
+                            {% if issue.help_url %}
+                            <a href="{{ issue.help_url }}" target="_blank" rel="noopener">Learn more →</a>
+                            {% endif %}
+                        </div>
+
+                        {% if issue.fix_suggestion %}
+                        <div class="issue-fix">
+                            <strong>How to fix:</strong>
+                            <p>{{ issue.fix_suggestion }}</p>
+                        </div>
+                        {% endif %}
+
+                        <details class="issue-instances">
+                            <summary>View {{ issue.instances|length }} instance(s)</summary>
+                            {% for instance in issue.instances[:5] %}
+                            <div class="instance">
+                                <p><strong>Selector:</strong> <code>{{ instance.selector }}</code></p>
+                                {% if instance.html %}
+                                <p><strong>HTML:</strong></p>
+                                <pre><code>{{ instance.html }}</code></pre>
+                                {% endif %}
+                                {% if instance.context %}
+                                <p><strong>Context:</strong> {{ instance.context }}</p>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                            {% if issue.instances|length > 5 %}
+                            <p class="instance-note">Showing first 5 of {{ issue.instances|length }} instances</p>
+                            {% endif %}
+                        </details>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </section>
+
+        <!-- Issues by WCAG Criteria -->
+        <section class="wcag-section">
+            <h2>Issues by WCAG Criteria</h2>
+
+            {% for criterion, criterion_issues in issues_by_wcag.items() %}
+            <div class="wcag-group">
+                <h3 class="wcag-heading">
+                    <span class="wcag-id">{{ criterion }}</span>
+                    <span class="wcag-count">{{ criterion_issues|length }} issue(s)</span>
+                </h3>
+
+                <ul class="wcag-issues-list">
+                    {% for issue in criterion_issues %}
+                    <li>
+                        <span class="impact-badge impact-{{ issue.impact }}">{{ issue.impact }}</span>
+                        {{ issue.description }}
+                        <span class="instance-count">({{ issue.instances|length }} instances)</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </section>
+
+        <!-- Page-by-Page Breakdown -->
+        <section class="pages-section">
+            <h2>Page-by-Page Analysis</h2>
+
+            <div class="pages-table-container">
+                <table class="pages-table">
+                    <thead>
+                        <tr>
+                            <th>URL</th>
+                            <th>Title</th>
+                            <th>Issues</th>
+                            <th>Score</th>
+                            <th>Load Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for page in pages %}
+                        <tr>
+                            <td class="url-cell">
+                                <a href="{{ page.url }}" target="_blank">{{ page.url|truncate(60) }}</a>
+                            </td>
+                            <td>{{ page.title|truncate(40) }}</td>
+                            <td class="issues-cell">
+                                <span class="issue-badge">{{ page.issues_count }}</span>
+                            </td>
+                            <td class="score-cell">
+                                <span class="score-badge score-{{ 'excellent' if page.compliance_score >= 90 else 'good' if page.compliance_score >= 70 else 'fair' if page.compliance_score >= 50 else 'poor' }}">
+                                    {{ page.compliance_score|round(0)|int }}%
+                                </span>
+                            </td>
+                            <td>{{ page.load_time_ms }}ms</td>
+                            <td>
+                                <span class="status-badge status-{{ page.status_code }}">{{ page.status_code }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Compliance Checklist -->
+        <section class="checklist-section">
+            <h2>WCAG Compliance Checklist</h2>
+
+            <div class="checklist">
+                <h3>Level A Requirements</h3>
+                <ul class="checklist-items">
+                    {% for criterion in wcag_checklist.level_a %}
+                    <li class="{{ 'checked' if criterion.passed else 'unchecked' }}">
+                        <span class="check-icon">{{ '✓' if criterion.passed else '✗' }}</span>
+                        <span class="check-text">{{ criterion.id }} - {{ criterion.name }}</span>
+                        {% if not criterion.passed %}
+                        <span class="check-issues">({{ criterion.issue_count }} issues)</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                <h3>Level AA Requirements</h3>
+                <ul class="checklist-items">
+                    {% for criterion in wcag_checklist.level_aa %}
+                    <li class="{{ 'checked' if criterion.passed else 'unchecked' }}">
+                        <span class="check-icon">{{ '✓' if criterion.passed else '✗' }}</span>
+                        <span class="check-text">{{ criterion.id }} - {{ criterion.name }}</span>
+                        {% if not criterion.passed %}
+                        <span class="check-issues">({{ criterion.issue_count }} issues)</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                <h3>Level AAA Requirements</h3>
+                <ul class="checklist-items">
+                    {% for criterion in wcag_checklist.level_aaa %}
+                    <li class="{{ 'checked' if criterion.passed else 'unchecked' }}">
+                        <span class="check-icon">{{ '✓' if criterion.passed else '✗' }}</span>
+                        <span class="check-text">{{ criterion.id }} - {{ criterion.name }}</span>
+                        {% if not criterion.passed %}
+                        <span class="check-issues">({{ criterion.issue_count }} issues)</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="report-footer">
+            <p>Generated by WCAG Scanner V2 on {{ generated_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+            <p>This report is an automated accessibility analysis. Manual testing is also recommended for comprehensive WCAG compliance.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Filter functionality
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const filter = btn.dataset.filter;
+                document.querySelectorAll('.impact-group').forEach(group => {
+                    if (filter === 'all' || group.dataset.impact === filter) {
+                        group.style.display = 'block';
+                    } else {
+                        group.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        // Print functionality
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                window.print();
+            }
+        });
+    </script>
+</body>
+</html>
