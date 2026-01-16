@@ -332,10 +332,24 @@ class ScannerService:
             # Convert instances
             instances = []
             for instance in violation.instances:
+                # Try to extract additional data if available
+                instance_data = None
+                if hasattr(instance, '__dict__'):
+                    # Extract non-standard fields as data
+                    extra_data = {}
+                    for key, value in instance.__dict__.items():
+                        if key not in ['html', 'selector', 'xpath', 'fix_suggestion'] and value is not None:
+                            extra_data[key] = str(value)
+
+                    if extra_data:
+                        import json
+                        instance_data = json.dumps(extra_data, indent=2)
+
                 instances.append({
                     "selector": instance.selector or "",
                     "html": instance.html or "",
                     "failure_summary": instance.fix_suggestion or "",
+                    "data": instance_data
                 })
 
             normalized.append({

@@ -119,7 +119,7 @@
 
         <!-- Issues by Impact -->
         <section class="issues-section">
-            <h2>Issues by Impact Level</h2>
+            <h2>🚨 Detailed Violations</h2>
 
             <div class="filter-controls">
                 <button class="filter-btn active" data-filter="all">All Issues</button>
@@ -133,139 +133,159 @@
             {% set impact_issues = issues_by_impact.get(impact, []) %}
             {% if impact_issues %}
             <div class="impact-group" data-impact="{{ impact }}">
-                <h3 class="impact-heading impact-{{ impact }}">
-                    {{ impact|title }} Issues ({{ impact_issues|length }})
-                </h3>
-
-                <div class="issues-list">
+                <div class="violations-list">
                     {% for enhanced_issue in impact_issues %}
                     {% set issue = enhanced_issue.issue %}
                     {% set fix_guide = enhanced_issue.fix_guide %}
                     {% set category = enhanced_issue.category %}
                     {% set category_icon = enhanced_issue.category_icon %}
 
-                    <div class="issue-card">
-                        <div class="issue-header">
-                            <span class="issue-impact impact-{{ issue.impact }}">{{ issue.impact|upper }}</span>
-                            <span class="issue-category">{{ category_icon }} {{ category }}</span>
-                            <span class="issue-wcag">
-                                {% for criterion in issue.wcag_criteria %}
-                                <span class="wcag-badge">{{ criterion }}</span>
-                                {% endfor %}
-                            </span>
+                    <div class="violation-card">
+                        <!-- Violation Header -->
+                        <div class="violation-title">
+                            <strong>{{ issue.rule_id }}</strong>
+                            <span class="impact-badge-inline impact-{{ issue.impact }}">{{ issue.impact|upper }}</span>
                         </div>
 
-                        <h4 class="issue-title">{{ issue.description }}</h4>
-
-                        <div class="issue-details">
-                            <p><strong>Rule ID:</strong> {{ issue.rule_id }}</p>
-                            <p><strong>WCAG Principle:</strong> {{ issue.principle|title }}</p>
-                            <p><strong>Detected by:</strong> {{ issue.detected_by|join(', ') }}</p>
-                            <p><strong>Instances:</strong> {{ issue.instances|length }} occurrence(s)</p>
+                        <!-- Occurrence Count -->
+                        <div class="violation-meta">
+                            <p><strong>Occurrences:</strong> {{ issue.instances|length }}</p>
                         </div>
 
-                        {% if fix_guide %}
-                        <!-- DETAILED FIX GUIDE -->
-                        <div class="fix-guide">
-                            <h5>📋 How to Fix: {{ fix_guide.title }}</h5>
-
-                            <div class="fix-why">
-                                <strong>Why this matters:</strong>
-                                <p>{{ fix_guide.why }}</p>
-                            </div>
-
-                            <div class="fix-how">
-                                <strong>How to fix:</strong>
-                                <p>{{ fix_guide.how_to_fix }}</p>
-                            </div>
-
-                            {% if fix_guide.code_example %}
-                            <div class="code-examples">
-                                <div class="code-example-grid">
-                                    <div class="code-before">
-                                        <strong>❌ Before (Incorrect):</strong>
-                                        <pre><code>{{ fix_guide.code_example.before }}</code></pre>
-                                    </div>
-                                    <div class="code-after">
-                                        <strong>✅ After (Correct):</strong>
-                                        <pre><code>{{ fix_guide.code_example.after }}</code></pre>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endif %}
-
-                            {% if fix_guide.steps %}
-                            <div class="fix-steps">
-                                <strong>Step-by-step guide:</strong>
-                                <ol>
-                                    {% for step in fix_guide.steps %}
-                                    <li>{{ step }}</li>
-                                    {% endfor %}
-                                </ol>
-                            </div>
-                            {% endif %}
-
-                            {% if fix_guide.good_examples %}
-                            <details class="good-examples">
-                                <summary>View {{ fix_guide.good_examples|length }} more example(s)</summary>
-                                {% for example in fix_guide.good_examples %}
-                                <div class="example">
-                                    <strong>{{ example.context }}:</strong>
-                                    <pre><code>{{ example.code }}</code></pre>
-                                </div>
-                                {% endfor %}
-                            </details>
-                            {% endif %}
-
-                            {% if fix_guide.tools %}
-                            <div class="fix-tools">
-                                <strong>Helpful tools:</strong>
-                                <ul>
-                                    {% for tool in fix_guide.tools %}
-                                    <li>{{ tool }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                            {% endif %}
-                        </div>
-                        {% else %}
-                        <!-- BASIC HELP -->
-                        <div class="issue-help">
-                            <p>{{ issue.help_text }}</p>
-                            {% if issue.help_url %}
-                            <a href="{{ issue.help_url }}" target="_blank" rel="noopener">Learn more →</a>
-                            {% endif %}
+                        <!-- Issue Description -->
+                        <div class="violation-issue">
+                            <p><strong>Issue:</strong> {{ issue.description }}</p>
                         </div>
 
-                        {% if issue.fix_suggestion %}
-                        <div class="issue-fix">
-                            <strong>How to fix:</strong>
-                            <p>{{ issue.fix_suggestion }}</p>
+                        <!-- Solution -->
+                        <div class="violation-solution">
+                            <p><strong>Solution:</strong> {{ issue.help_text or fix_guide.how_to_fix if fix_guide else 'See details below' }}</p>
                         </div>
-                        {% endif %}
-                        {% endif %}
 
-                        <details class="issue-instances">
-                            <summary>View {{ issue.instances|length }} affected element(s)</summary>
-                            {% for instance in issue.instances[:5] %}
-                            <div class="instance">
-                                <p><strong>Selector:</strong> <code>{{ instance.selector }}</code></p>
-                                {% if instance.html %}
+                        <!-- Affected Elements Section -->
+                        <div class="affected-elements-header">
+                            <h4>📍 Affected Elements (showing first {{ [issue.instances|length, 5]|min }} of {{ issue.instances|length }}):</h4>
+                        </div>
+
+                        <!-- List each affected element -->
+                        {% for instance in issue.instances[:5] %}
+                        <div class="element-details">
+                            <div class="element-number">
+                                <strong>Element {{ loop.index }}:</strong>
+                            </div>
+
+                            <!-- CSS Selector -->
+                            <div class="element-selector">
+                                <p><strong>CSS Selector:</strong> <code>{{ instance.selector or 'N/A' }}</code></p>
+                            </div>
+
+                            <!-- HTML -->
+                            {% if instance.html %}
+                            <div class="element-html">
                                 <p><strong>HTML:</strong></p>
                                 <pre><code>{{ instance.html }}</code></pre>
+                            </div>
+                            {% endif %}
+
+                            <!-- What's Wrong -->
+                            {% if instance.failure_summary %}
+                            <div class="element-wrong">
+                                <p><strong>⚠ What's Wrong:</strong></p>
+                                <div class="wrong-details">
+                                    {{ instance.failure_summary }}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Violation Details (raw data) -->
+                            {% if instance.data %}
+                            <div class="violation-details-data">
+                                <p><strong>📋 Violation Details:</strong></p>
+                                <pre><code>{{ instance.data }}</code></pre>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+
+                        <!-- Fix Guide (if available) -->
+                        {% if fix_guide %}
+                        <details class="fix-guide-collapsible">
+                            <summary>📚 View Detailed Fix Guide</summary>
+                            <div class="fix-guide">
+                                <h5>📋 How to Fix: {{ fix_guide.title }}</h5>
+
+                                <div class="fix-why">
+                                    <strong>Why this matters:</strong>
+                                    <p>{{ fix_guide.why }}</p>
+                                </div>
+
+                                <div class="fix-how">
+                                    <strong>How to fix:</strong>
+                                    <p>{{ fix_guide.how_to_fix }}</p>
+                                </div>
+
+                                {% if fix_guide.code_example %}
+                                <div class="code-examples">
+                                    <div class="code-example-grid">
+                                        <div class="code-before">
+                                            <strong>❌ Before (Incorrect):</strong>
+                                            <pre><code>{{ fix_guide.code_example.before }}</code></pre>
+                                        </div>
+                                        <div class="code-after">
+                                            <strong>✅ After (Correct):</strong>
+                                            <pre><code>{{ fix_guide.code_example.after }}</code></pre>
+                                        </div>
+                                    </div>
+                                </div>
                                 {% endif %}
-                                {% if instance.context %}
-                                <p><strong>Context:</strong> {{ instance.context }}</p>
+
+                                {% if fix_guide.steps %}
+                                <div class="fix-steps">
+                                    <strong>Step-by-step guide:</strong>
+                                    <ol>
+                                        {% for step in fix_guide.steps %}
+                                        <li>{{ step }}</li>
+                                        {% endfor %}
+                                    </ol>
+                                </div>
                                 {% endif %}
-                                {% if instance.fix_suggestion %}
-                                <p><strong>Specific fix:</strong> {{ instance.fix_suggestion }}</p>
+
+                                {% if fix_guide.good_examples %}
+                                <div class="good-examples">
+                                    <strong>More Examples:</strong>
+                                    {% for example in fix_guide.good_examples %}
+                                    <div class="example">
+                                        <strong>{{ example.context }}:</strong>
+                                        <pre><code>{{ example.code }}</code></pre>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+
+                                {% if fix_guide.tools %}
+                                <div class="fix-tools">
+                                    <strong>Helpful tools:</strong>
+                                    <ul>
+                                        {% for tool in fix_guide.tools %}
+                                        <li>{{ tool }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
                                 {% endif %}
                             </div>
-                            {% endfor %}
-                            {% if issue.instances|length > 5 %}
-                            <p class="instance-note">Showing first 5 of {{ issue.instances|length }} instances</p>
-                            {% endif %}
                         </details>
+                        {% endif %}
+
+                        <!-- WCAG Info Footer -->
+                        <div class="violation-footer">
+                            <span class="violation-category">{{ category_icon }} {{ category }}</span>
+                            <span class="violation-wcag">
+                                {% for criterion in issue.wcag_criteria %}
+                                <span class="wcag-badge-small">WCAG {{ criterion }}</span>
+                                {% endfor %}
+                            </span>
+                            <span class="violation-detected">Detected by: {{ issue.detected_by|join(', ') }}</span>
+                        </div>
                     </div>
                     {% endfor %}
                 </div>

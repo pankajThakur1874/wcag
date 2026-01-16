@@ -232,6 +232,8 @@ class IssueInstance(BaseModel):
     html: Optional[str] = None
     screenshot_path: Optional[str] = None
     context: Optional[str] = None
+    failure_summary: Optional[str] = None  # What's wrong with this element
+    data: Optional[str] = None  # Raw violation data (JSON stringified)
 
 
 class Issue(MongoBaseModel):
