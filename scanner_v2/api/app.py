@@ -10,7 +10,7 @@ from scanner_v2.workers.queue_manager import QueueManager
 from scanner_v2.workers.worker_pool import WorkerPool
 from scanner_v2.api.dependencies import set_db_instance, set_queue_manager_instance
 from scanner_v2.api.middleware import setup_middleware
-from scanner_v2.api.routes import health, auth, projects, scans, issues, reports
+from scanner_v2.api.routes import health, auth, projects, scans, issues, reports, frontend
 
 logger = get_logger("api.app")
 
@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize Queue Manager
     global _queue_manager
-    _queue_manager = QueueManager(config)
+    _queue_manager = QueueManager(max_queue_size=config.queue.max_queue_size)
     set_queue_manager_instance(_queue_manager)
     logger.info("Queue manager initialized")
 
@@ -106,6 +106,9 @@ def create_app() -> FastAPI:
     app.include_router(scans.router, prefix="/api/v1")
     app.include_router(issues.router, prefix="/api/v1")
     app.include_router(reports.router, prefix="/api/v1")
+
+    # Frontend routes (no prefix - serves at root)
+    app.include_router(frontend.router)
 
     logger.info("FastAPI application created")
 

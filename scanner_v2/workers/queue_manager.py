@@ -40,6 +40,9 @@ class QueueManager:
             "cancelled_jobs": 0,
         }
 
+        # Counter for priority queue tie-breaking
+        self._counter = 0
+
         logger.info(f"Queue manager initialized (max_size={max_queue_size})")
 
     async def enqueue_job(
@@ -83,8 +86,9 @@ class QueueManager:
         # Enqueue to appropriate queue
         queue = self._get_queue(job_type)
 
-        # Use priority by wrapping job
-        await queue.put((priority, job))
+        # Use priority and counter for ordering (counter prevents comparison of Job objects)
+        self._counter += 1
+        await queue.put((priority, self._counter, job))
 
         self.stats["total_jobs"] += 1
 
@@ -107,9 +111,9 @@ class QueueManager:
 
         try:
             if timeout:
-                priority, job = await asyncio.wait_for(queue.get(), timeout=timeout)
+                priority, counter, job = await asyncio.wait_for(queue.get(), timeout=timeout)
             else:
-                priority, job = await queue.get()
+                priority, counter, job = await queue.get()
 
             # Mark as running
             job.status = JobStatus.RUNNING

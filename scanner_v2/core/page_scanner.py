@@ -3,12 +3,9 @@
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
-from playwright.async_api import Browser, Page
-
 from scanner_v2.utils.logger import get_logger
 from scanner_v2.utils.helpers import utc_now, calculate_duration_ms, generate_id
 from scanner_v2.services.scanner_service import scanner_service
-from scanner_v2.services.screenshot_service import screenshot_service
 from scanner_v2.database.models import ScannedPage, RawScanResults
 
 logger = get_logger("page_scanner")
@@ -19,26 +16,20 @@ class PageScanner:
 
     def __init__(
         self,
-        browser: Browser,
         scanners: Optional[List[str]] = None,
         screenshot_enabled: bool = True,
-        wait_time: int = 2000,
         timeout: int = 30000
     ):
         """
         Initialize page scanner.
 
         Args:
-            browser: Playwright browser instance
             scanners: List of scanners to use
             screenshot_enabled: Whether to capture screenshots
-            wait_time: Time to wait after page load (ms)
-            timeout: Page load timeout (ms)
+            timeout: Scanner timeout (ms)
         """
-        self.browser = browser
         self.scanners = scanners or ["axe"]
         self.screenshot_enabled = screenshot_enabled
-        self.wait_time = wait_time
         self.timeout = timeout
 
     async def scan_page(
@@ -48,12 +39,12 @@ class PageScanner:
         viewport: Optional[Dict[str, int]] = None
     ) -> Dict[str, Any]:
         """
-        Scan a single page.
+        Scan a single page using V1 scanners with shared browser.
 
         Args:
             url: URL to scan
             scan_id: Parent scan ID
-            viewport: Viewport size
+            viewport: Viewport size (currently unused, V1 BrowserManager handles this)
 
         Returns:
             Scan result dictionary
@@ -61,38 +52,29 @@ class PageScanner:
         logger.info(f"Scanning page: {url}")
 
         start_time = utc_now()
-        page: Optional[Page] = None
         page_id = generate_id()
 
         try:
-            # Create new page
-            page = await self.browser.new_page(
-                viewport=viewport or {"width": 1920, "height": 1080}
+            # Call scanner_service which now handles:
+            # 1. Browser creation (single instance)
+            # 2. Screenshot capture
+            # 3. Running all V1 scanners with shared browser
+            scan_result = await scanner_service.scan_page(
+                url=url,
+                scan_id=scan_id,
+                page_id=page_id,
+                scanners=self.scanners,
+                screenshot_enabled=self.screenshot_enabled,
+                timeout=self.timeout
             )
 
-            # Navigate to URL
-            response = await page.goto(url, timeout=self.timeout, wait_until="networkidle")
+            # Extract scanner results
+            scanner_results = scan_result.get("scanner_results", {})
+            screenshot_path = scan_result.get("screenshot_path")
+            title = scan_result.get("title")
+            status_code = scan_result.get("status_code")
 
-            # Wait for additional rendering
-            await page.wait_for_timeout(self.wait_time)
-
-            # Get page info
-            title = await page.title()
-            status_code = response.status if response else None
-
-            # Capture full page screenshot
-            screenshot_path = None
-            if self.screenshot_enabled:
-                screenshot_path = await screenshot_service.capture_full_page(
-                    page, scan_id, page_id, url
-                )
-
-            # Run scanners
-            scanner_results = await scanner_service.scan_page(
-                page, url, self.scanners, self.timeout
-            )
-
-            # Extract all issues
+            # Extract all issues and raw results
             all_issues = []
             raw_results = {}
 
@@ -119,7 +101,7 @@ class PageScanner:
 
         except Exception as e:
             duration_ms = calculate_duration_ms(start_time)
-            logger.error(f"Page scan failed for {url}: {e}")
+            logger.error(f"Scanner execution failed for {url}: {e}")
 
             return {
                 "page_id": page_id,
@@ -129,7 +111,3 @@ class PageScanner:
                 "issues": [],
                 "issues_count": 0,
             }
-
-        finally:
-            if page:
-                await page.close()

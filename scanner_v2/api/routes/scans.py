@@ -15,7 +15,10 @@ from scanner_v2.database.repositories.project_repo import ProjectRepository
 from scanner_v2.database.repositories.scan_repo import ScanRepository
 from scanner_v2.database.repositories.page_repo import PageRepository
 from scanner_v2.database.repositories.issue_repo import IssueRepository
-from scanner_v2.database.models import User, ScanStatus, ScanConfig, ScanType
+from scanner_v2.database.models import (
+    User, ScanStatus, ScanConfig, ScanType,
+    ImpactLevel, WCAGLevel, Principle
+)
 from scanner_v2.workers.queue_manager import QueueManager
 from scanner_v2.schemas.scan import ScanCreateRequest, ScanResponse, ScanListResponse, JobType, JobPriority
 from scanner_v2.utils.logger import get_logger
@@ -87,6 +90,96 @@ async def create_scan(
         config=config
     )
 
+    # Callback to update scan when job completes
+    async def on_scan_complete(job, result):
+        """Update scan with results when job completes."""
+        from scanner_v2.database.models import ScanSummary, ScanScores, ScanProgress, ImpactSummary, WCAGLevelSummary, PrincipleScores, Issue, IssueStatus
+        from scanner_v2.api.dependencies import get_db_instance
+
+        try:
+            # Get database instance to access repositories
+            mongodb_instance = get_db_instance()
+            db = mongodb_instance.db  # Get the actual AsyncIOMotorDatabase
+            issue_repo = IssueRepository(db)
+            scan_id = result.get("scan_id")
+            if not scan_id:
+                logger.error(f"No scan_id in job result")
+                return
+
+            # Update status
+            status_str = result.get("status", "completed")
+            scan_status = ScanStatus(status_str) if isinstance(status_str, str) else status_str
+            error_message = result.get("error_message")
+
+            await scan_repo.update_status(scan_id, scan_status, error_message)
+
+            # Update progress if available
+            if "total_pages" in result:
+                progress = ScanProgress(
+                    total_pages=result.get("total_pages", 0),
+                    pages_crawled=result.get("total_pages", 0),
+                    pages_scanned=result.get("pages_scanned", 0),
+                    current_page=None
+                )
+                await scan_repo.update_progress(scan_id, progress)
+
+            # Update results (summary and scores)
+            if "summary" in result and "scores" in result:
+                summary_data = result.get("summary", {})
+                scores_data = result.get("scores", {})
+
+                summary = ScanSummary(
+                    total_issues=summary_data.get("total_issues", 0),
+                    by_impact=ImpactSummary(**summary_data.get("by_impact", {})),
+                    by_wcag_level=WCAGLevelSummary(**summary_data.get("by_wcag_level", {}))
+                )
+
+                scores = ScanScores(
+                    overall=scores_data.get("overall", 0.0),
+                    by_principle=PrincipleScores(**scores_data.get("by_principle", {}))
+                )
+
+                await scan_repo.update_results(scan_id, summary, scores)
+
+            # Save issues to database
+            if "all_issues" in result:
+                from scanner_v2.database.models import Issue, IssueStatus
+                issues_data = result.get("all_issues", [])
+
+                logger.info(f"Saving {len(issues_data)} issues for scan {scan_id}")
+
+                # Create Issue objects and save to database
+                for issue_data in issues_data:
+                    # detected_by should be a list, handle both string and list
+                    detected_by = issue_data.get("detected_by", [])
+                    if isinstance(detected_by, str):
+                        detected_by = [detected_by]
+                    elif not detected_by:
+                        detected_by = ["unknown"]
+
+                    issue = Issue(
+                        scan_id=scan_id,
+                        page_id=issue_data.get("page_id", ""),  # Required field
+                        rule_id=issue_data.get("rule_id", ""),
+                        description=issue_data.get("description", ""),
+                        help_text=issue_data.get("help", ""),
+                        help_url=issue_data.get("help_url", ""),
+                        impact=ImpactLevel(issue_data.get("impact", "moderate")),
+                        wcag_criteria=issue_data.get("wcag_criteria", []),
+                        wcag_level=WCAGLevel(issue_data.get("wcag_level", "AA")),
+                        principle=Principle(issue_data.get("principle", "perceivable")),
+                        instances=issue_data.get("instances", []),
+                        detected_by=detected_by,  # Now a list
+                        status=IssueStatus.OPEN
+                    )
+                    await issue_repo.create(issue)
+
+                logger.info(f"Saved {len(issues_data)} issues for scan {scan_id}")
+
+            logger.info(f"Updated scan {scan_id} with job results")
+        except Exception as e:
+            logger.error(f"Failed to update scan from job result: {e}")
+
     # Enqueue scan job
     job_id = await queue_manager.enqueue_job(
         job_type=JobType.SCAN_ORCHESTRATION,
@@ -106,7 +199,8 @@ async def create_scan(
                 "screenshot_enabled": config.screenshot_enabled
             }
         },
-        priority=JobPriority.NORMAL.value
+        priority=JobPriority.NORMAL.value,
+        callback=on_scan_complete
     )
 
     logger.info(f"Scan created and enqueued: {scan.id} for project {project_id}, job: {job_id}")

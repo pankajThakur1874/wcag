@@ -108,7 +108,7 @@ class ScanWorker:
         Args:
             job: Job to process
         """
-        logger.info(f"Worker {self.worker_id} processing job {job.job_id} (type={job.job_type.value})")
+        logger.info(f"Worker {self.worker_id} processing job {job.job_id} (type={job.job_type})")
 
         job.worker_id = self.worker_id
 
@@ -159,13 +159,39 @@ class ScanWorker:
         Returns:
             Scan results
         """
+        from scanner_v2.database.models import ScanProgress
+        from scanner_v2.api.dependencies import get_db_instance
+        from scanner_v2.database.repositories.scan_repo import ScanRepository
+
         payload = ScanJobPayload(**job.payload)
 
         logger.info(f"Executing scan orchestration for {payload.base_url}")
 
-        # Progress callback to track status
-        def progress_callback(status: str, data: Dict):
+        # Get database access for progress updates
+        mongodb_instance = get_db_instance()
+        db = mongodb_instance.db  # Get the actual AsyncIOMotorDatabase
+        scan_repo = ScanRepository(db)
+
+        # Progress callback to track status AND update database
+        async def progress_callback(status: str, data: Dict):
             logger.info(f"Scan {payload.scan_id} progress: {status} - {data.get('message')}")
+
+            # Update database with progress
+            try:
+                # Update status if it changed
+                if status in [s.value for s in ScanStatus]:
+                    await scan_repo.update_status(payload.scan_id, ScanStatus(status))
+
+                # Update progress details
+                progress = ScanProgress(
+                    total_pages=data.get('pages_discovered', data.get('total_pages', 0)),
+                    pages_crawled=data.get('pages_discovered', 0),
+                    pages_scanned=data.get('pages_scanned', 0),
+                    current_page=data.get('current_url')
+                )
+                await scan_repo.update_progress(payload.scan_id, progress)
+            except Exception as e:
+                logger.warning(f"Failed to update scan progress in database: {e}")
 
         # Execute scan
         results = await scan_orchestrator.execute_scan(

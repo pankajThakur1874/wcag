@@ -826,3 +826,284 @@ h4 {
         padding: 0.5rem;
     }
 }
+
+/* Enhanced Fix Guide Styles */
+.issue-category {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #f3f4f6;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #4b5563;
+}
+
+.fix-guide {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    background: #f0fdf4;
+    border: 2px solid #86efac;
+    border-radius: 8px;
+}
+
+.fix-guide h5 {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    color: #065f46;
+}
+
+.fix-why,
+.fix-how {
+    margin-bottom: 1rem;
+}
+
+.fix-why strong,
+.fix-how strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #065f46;
+    font-size: 0.95rem;
+}
+
+.fix-why p,
+.fix-how p {
+    margin: 0;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 4px;
+    line-height: 1.6;
+}
+
+.code-examples {
+    margin: 1.5rem 0;
+}
+
+.code-example-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .code-example-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.code-before,
+.code-after {
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.code-before {
+    background: #fef2f2;
+    border: 2px solid #fca5a5;
+}
+
+.code-after {
+    background: #f0fdf4;
+    border: 2px solid #86efac;
+}
+
+.code-before strong,
+.code-after strong {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.code-before strong {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.code-after strong {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.code-before pre,
+.code-after pre {
+    margin: 0;
+    padding: 0.75rem;
+    background: white;
+    overflow-x: auto;
+}
+
+.code-before code,
+.code-after code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.fix-steps {
+    margin: 1rem 0;
+}
+
+.fix-steps strong {
+    display: block;
+    margin-bottom: 0.75rem;
+    color: #065f46;
+    font-size: 0.95rem;
+}
+
+.fix-steps ol {
+    margin: 0;
+    padding-left: 1.5rem;
+    background: white;
+    border-radius: 4px;
+    padding: 1rem 1rem 1rem 2rem;
+}
+
+.fix-steps li {
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+}
+
+.fix-steps li:last-child {
+    margin-bottom: 0;
+}
+
+.good-examples {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+}
+
+.good-examples summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #065f46;
+    padding: 0.5rem;
+}
+
+.good-examples summary:hover {
+    background: #f0fdf4;
+    border-radius: 4px;
+}
+
+.good-examples .example {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 4px;
+}
+
+.good-examples .example strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #374151;
+}
+
+.good-examples .example pre {
+    margin: 0.5rem 0 0 0;
+    padding: 0.75rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.fix-tools {
+    margin: 1rem 0;
+}
+
+.fix-tools strong {
+    display: block;
+    margin-bottom: 0.75rem;
+    color: #065f46;
+    font-size: 0.95rem;
+}
+
+.fix-tools ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    background: white;
+    border-radius: 4px;
+    padding: 0.75rem 0.75rem 0.75rem 2rem;
+}
+
+.fix-tools li {
+    margin-bottom: 0.25rem;
+    line-height: 1.6;
+}
+
+.fix-tools li:last-child {
+    margin-bottom: 0;
+}
+
+/* Enhanced instances section */
+.issue-instances {
+    margin-top: 1.5rem;
+}
+
+.issue-instances summary {
+    cursor: pointer;
+    padding: 0.75rem 1rem;
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.issue-instances summary:hover {
+    background: #f3f4f6;
+}
+
+.instance {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #fafafa;
+    border-left: 3px solid #9ca3af;
+    border-radius: 4px;
+}
+
+.instance p {
+    margin-bottom: 0.5rem;
+}
+
+.instance p:last-child {
+    margin-bottom: 0;
+}
+
+.instance code {
+    padding: 0.2rem 0.4rem;
+    background: #e5e7eb;
+    border-radius: 3px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.85rem;
+    word-break: break-all;
+}
+
+.instance pre {
+    margin: 0.5rem 0;
+    padding: 0.75rem;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.instance pre code {
+    padding: 0;
+    background: none;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.instance-note {
+    margin-top: 1rem;
+    padding: 0.5rem;
+    background: #fffbeb;
+    border-left: 3px solid #f59e0b;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    color: #92400e;
+}

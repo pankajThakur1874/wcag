@@ -35,7 +35,7 @@ class BrowserManager:
         # Try Firefox first (better for some bot protections)
         try:
             self._browser = await self._playwright.firefox.launch(
-                headless=False,  # Non-headless for better success rate
+                headless=True,  # Use headless for server compatibility
                 firefox_user_prefs={
                     "dom.webdriver.enabled": False,
                     "useAutomationExtension": False,
@@ -48,7 +48,7 @@ class BrowserManager:
             logger.warning(f"Firefox failed, falling back to Chromium: {e}")
             # Fallback to Chromium with aggressive anti-detection
             self._browser = await self._playwright.chromium.launch(
-                headless=False,  # Non-headless is harder to detect
+                headless=True,  # Use headless for server compatibility
                 args=[
                     '--no-sandbox',
                     '--disable-setuid-sandbox',

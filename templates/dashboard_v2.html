@@ -1,0 +1,2088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WCAG Scanner V2 - Dashboard</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--gray-50);
+            min-height: 100vh;
+            color: var(--gray-900);
+        }
+
+        /* Authentication Screen */
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .auth-box {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow-xl);
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .auth-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .auth-logo h1 {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .auth-logo p {
+            color: var(--gray-600);
+        }
+
+        .auth-tabs {
+            display: flex;
+            border-bottom: 2px solid var(--gray-200);
+            margin-bottom: 30px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--gray-600);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+
+        .auth-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--gray-700);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: var(--danger);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        /* Main Dashboard */
+        .dashboard-container {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .dashboard-container.active {
+            display: block;
+        }
+
+        .dashboard-header {
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 16px 24px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-logo h2 {
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: var(--gray-50);
+            border-radius: 8px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--gray-300);
+            color: var(--gray-700);
+        }
+
+        .btn-outline:hover {
+            background: var(--gray-100);
+        }
+
+        .dashboard-body {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--gray-600);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--gray-900);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        /* Projects Tab */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .project-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .project-card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 16px;
+        }
+
+        .project-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .project-url {
+            font-size: 0.9rem;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .project-url:hover {
+            text-decoration: underline;
+        }
+
+        .project-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            padding: 8px;
+            background: var(--gray-100);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: var(--gray-200);
+        }
+
+        .project-description {
+            color: var(--gray-600);
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+        }
+
+        .project-stats {
+            display: flex;
+            gap: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .stat-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+            animation: fadeIn 0.2s;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--gray-600);
+        }
+
+        /* Scans Tab */
+        .scans-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .scan-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--gray-300);
+        }
+
+        .scan-card.queued { border-left-color: var(--gray-600); }
+        .scan-card.crawling { border-left-color: var(--warning); }
+        .scan-card.scanning { border-left-color: var(--warning); }
+        .scan-card.completed { border-left-color: var(--success); }
+        .scan-card.failed { border-left-color: var(--danger); }
+        .scan-card.cancelled { border-left-color: var(--gray-600); }
+
+        .scan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 16px;
+        }
+
+        .scan-info h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .scan-meta {
+            font-size: 0.85rem;
+            color: var(--gray-600);
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-badge.queued { background: #f3f4f6; color: var(--gray-700); }
+        .status-badge.crawling { background: #fffbeb; color: #b45309; }
+        .status-badge.scanning { background: #fffbeb; color: #b45309; }
+        .status-badge.completed { background: #ecfdf5; color: #059669; }
+        .status-badge.failed { background: #fef2f2; color: #dc2626; }
+        .status-badge.cancelled { background: #f3f4f6; color: var(--gray-700); }
+
+        .progress-bar-container {
+            background: var(--gray-200);
+            border-radius: 10px;
+            height: 8px;
+            margin: 16px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #a855f7);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            animation: progress-pulse 2s ease-in-out infinite;
+        }
+
+        .scan-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .scan-stat {
+            text-align: center;
+            padding: 12px;
+            background: var(--gray-50);
+            border-radius: 8px;
+        }
+
+        .scan-stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .scan-stat-value.critical { color: var(--danger); }
+        .scan-stat-value.serious { color: #f97316; }
+        .scan-stat-value.moderate { color: var(--warning); }
+        .scan-stat-value.minor { color: var(--success); }
+
+        .scan-stat-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            margin-top: 4px;
+        }
+
+        /* Issues Tab */
+        .issue-filters {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-select {
+            padding: 10px 14px;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            background: white;
+            cursor: pointer;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .issues-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .issue-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--gray-300);
+        }
+
+        .issue-card.critical { border-left-color: var(--danger); }
+        .issue-card.serious { border-left-color: #f97316; }
+        .issue-card.moderate { border-left-color: var(--warning); }
+        .issue-card.minor { border-left-color: var(--success); }
+
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+
+        .issue-title {
+            font-weight: 700;
+            color: var(--gray-900);
+            flex: 1;
+        }
+
+        .impact-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .impact-badge.critical { background: #fef2f2; color: var(--danger); }
+        .impact-badge.serious { background: #fff7ed; color: #ea580c; }
+        .impact-badge.moderate { background: #fffbeb; color: #b45309; }
+        .impact-badge.minor { background: #ecfdf5; color: #059669; }
+
+        .issue-meta {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            color: var(--gray-600);
+        }
+
+        .issue-instances {
+            margin-top: 16px;
+            display: none;
+        }
+
+        .issue-instances.expanded {
+            display: block;
+        }
+
+        .instance-item {
+            background: var(--gray-50);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+
+        .instance-selector {
+            font-family: monospace;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .instance-html {
+            background: var(--gray-200);
+            padding: 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            overflow-x: auto;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .toast {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-xl);
+            min-width: 300px;
+            animation: slideInRight 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 4px solid var(--gray-300);
+        }
+
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--danger); }
+        .toast.warning { border-left-color: var(--warning); }
+        .toast.info { border-left-color: var(--primary); }
+
+        .toast-message {
+            flex: 1;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--gray-600);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .empty-state-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--gray-900);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes progress-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .scan-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Authentication Screen -->
+    <div class="auth-container" id="authContainer">
+        <div class="auth-box">
+            <div class="auth-logo">
+                <h1>WCAG Scanner V2</h1>
+                <p>Professional Accessibility Testing</p>
+            </div>
+
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="switchAuthTab('login')">Login</div>
+                <div class="auth-tab" onclick="switchAuthTab('register')">Register</div>
+            </div>
+
+            <div class="error-message" id="authError"></div>
+
+            <!-- Login Form -->
+            <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn btn-primary" id="loginBtn">
+                    <span id="loginBtnText">Login</span>
+                    <div class="spinner" id="loginSpinner" style="display: none;"></div>
+                </button>
+            </form>
+
+            <!-- Register Form -->
+            <form class="auth-form" id="registerForm" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input type="text" class="form-input" id="registerName" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="registerEmail" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="registerPassword" minlength="8" required>
+                </div>
+                <button type="submit" class="btn btn-primary" id="registerBtn">
+                    <span id="registerBtnText">Create Account</span>
+                    <div class="spinner" id="registerSpinner" style="display: none;"></div>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div class="dashboard-container" id="dashboardContainer">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <div class="header-content">
+                <div class="header-logo">
+                    <h2>WCAG Scanner V2</h2>
+                </div>
+                <div class="header-actions">
+                    <div class="user-info">
+                        <div class="user-avatar" id="userAvatar">U</div>
+                        <span id="userName">User</span>
+                    </div>
+                    <button class="btn btn-outline" onclick="handleLogout()">Logout</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="dashboard-body">
+            <!-- Tabs -->
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('projects')">Projects</div>
+                <div class="tab" onclick="switchTab('scans')">Scans</div>
+                <div class="tab" onclick="switchTab('issues')">Issues</div>
+                <div class="tab" onclick="switchTab('reports')">Reports</div>
+                <div class="tab" onclick="switchTab('settings')">Settings</div>
+            </div>
+
+            <!-- Projects Tab -->
+            <div class="tab-content active" id="projectsTab">
+                <div class="section-header">
+                    <h2 class="section-title">My Projects</h2>
+                    <button class="btn btn-success" onclick="openCreateProjectModal()">+ Create Project</button>
+                </div>
+                <div class="projects-grid" id="projectsGrid">
+                    <!-- Projects will be dynamically loaded -->
+                </div>
+            </div>
+
+            <!-- Scans Tab -->
+            <div class="tab-content" id="scansTab">
+                <div class="section-header">
+                    <h2 class="section-title">Scans</h2>
+                    <button class="btn btn-success" onclick="openCreateScanModal()">+ New Scan</button>
+                </div>
+                <div class="scans-list" id="scansList">
+                    <!-- Scans will be dynamically loaded -->
+                </div>
+            </div>
+
+            <!-- Issues Tab -->
+            <div class="tab-content" id="issuesTab">
+                <div class="section-header">
+                    <h2 class="section-title">Issues</h2>
+                </div>
+                <div class="issue-filters">
+                    <div class="filter-grid">
+                        <div class="filter-group">
+                            <label class="form-label">Scan</label>
+                            <select class="filter-select" id="issueScanFilter" onchange="loadIssues()">
+                                <option value="">Select a scan...</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Impact</label>
+                            <select class="filter-select" id="issueImpactFilter" onchange="filterIssues()">
+                                <option value="">All Impacts</option>
+                                <option value="critical">Critical</option>
+                                <option value="serious">Serious</option>
+                                <option value="moderate">Moderate</option>
+                                <option value="minor">Minor</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">WCAG Level</label>
+                            <select class="filter-select" id="issueWcagFilter" onchange="filterIssues()">
+                                <option value="">All Levels</option>
+                                <option value="A">Level A</option>
+                                <option value="AA">Level AA</option>
+                                <option value="AAA">Level AAA</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Principle</label>
+                            <select class="filter-select" id="issuePrincipleFilter" onchange="filterIssues()">
+                                <option value="">All Principles</option>
+                                <option value="perceivable">Perceivable</option>
+                                <option value="operable">Operable</option>
+                                <option value="understandable">Understandable</option>
+                                <option value="robust">Robust</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="issues-list" id="issuesList">
+                    <!-- Issues will be dynamically loaded -->
+                </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div class="tab-content" id="reportsTab">
+                <div class="section-header">
+                    <h2 class="section-title">Reports</h2>
+                </div>
+                <div id="reportsContent">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <div class="empty-state-title">Select a scan to download reports</div>
+                        <p>Reports are available for completed scans</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-content" id="settingsTab">
+                <div class="section-header">
+                    <h2 class="section-title">Settings</h2>
+                </div>
+                <div id="settingsContent">
+                    <!-- Settings content -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Modal -->
+    <div class="modal" id="projectModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="projectModalTitle">Create Project</h3>
+                <button class="btn-close" onclick="closeProjectModal()">&times;</button>
+            </div>
+            <form id="projectForm" onsubmit="handleProjectSubmit(event)">
+                <div class="form-group">
+                    <label class="form-label">Project Name*</label>
+                    <input type="text" class="form-input" id="projectName" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Base URL*</label>
+                    <input type="url" class="form-input" id="projectUrl" placeholder="https://example.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-input" id="projectDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">WCAG Level</label>
+                    <select class="form-input" id="projectWcagLevel">
+                        <option value="A">Level A</option>
+                        <option value="AA" selected>Level AA</option>
+                        <option value="AAA">Level AAA</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" id="projectSubmitBtn">
+                    <span id="projectSubmitText">Create Project</span>
+                    <div class="spinner" id="projectSubmitSpinner" style="display: none;"></div>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scan Modal -->
+    <div class="modal" id="scanModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Create Scan</h3>
+                <button class="btn-close" onclick="closeScanModal()">&times;</button>
+            </div>
+            <form id="scanForm" onsubmit="handleScanSubmit(event)">
+                <div class="form-group">
+                    <label class="form-label">Project*</label>
+                    <select class="form-input" id="scanProject" required>
+                        <option value="">Select a project...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Scan Type</label>
+                    <select class="form-input" id="scanType">
+                        <option value="full">Full Site Scan</option>
+                        <option value="single_page">Single Page</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Max Pages</label>
+                    <input type="number" class="form-input" id="scanMaxPages" value="100" min="1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Max Depth</label>
+                    <input type="number" class="form-input" id="scanMaxDepth" value="3" min="1" max="5">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Scanners (Select at least one)</label>
+                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--gray-300); border-radius: 8px; padding: 12px; background: white;">
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="axe" checked style="margin-right: 8px;">
+                            <strong>Axe-core</strong> - Industry standard accessibility testing (Recommended)
+                        </label>
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="lighthouse" style="margin-right: 8px;">
+                            <strong>Lighthouse</strong> - Google's accessibility audit tool
+                        </label>
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="pa11y" style="margin-right: 8px;">
+                            <strong>Pa11y</strong> - Automated accessibility testing tool
+                        </label>
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="html_validator" style="margin-right: 8px;">
+                            <strong>HTML Validator</strong> - Validates HTML structure
+                        </label>
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="contrast" style="margin-right: 8px;">
+                            <strong>Contrast Checker</strong> - Color contrast analysis
+                        </label>
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="keyboard" style="margin-right: 8px;">
+                            <strong>Keyboard Scanner</strong> - Keyboard navigation testing
+                        </label>
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="aria" style="margin-right: 8px;">
+                            <strong>ARIA Scanner</strong> - ARIA attributes validation
+                        </label>
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="forms" style="margin-right: 8px;">
+                            <strong>Forms Scanner</strong> - Form accessibility checks
+                        </label>
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="seo" style="margin-right: 8px;">
+                            <strong>SEO Scanner</strong> - SEO accessibility features
+                        </label>
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="link_text" style="margin-right: 8px;">
+                            <strong>Link Text Scanner</strong> - Link text quality
+                        </label>
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="image_alt" style="margin-right: 8px;">
+                            <strong>Image Alt Scanner</strong> - Alt text validation
+                        </label>
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="media" style="margin-right: 8px;">
+                            <strong>Media Scanner</strong> - Audio/video accessibility
+                        </label>
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="touch_target" style="margin-right: 8px;">
+                            <strong>Touch Target Scanner</strong> - Touch target size
+                        </label>
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="readability" style="margin-right: 8px;">
+                            <strong>Readability Scanner</strong> - Content readability
+                        </label>
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" class="scanner-checkbox" value="interactive" style="margin-right: 8px;">
+                            <strong>Interactive Scanner</strong> - Interactive elements
+                        </label>
+                    </div>
+                    <div style="margin-top: 8px; display: flex; gap: 8px;">
+                        <button type="button" onclick="selectAllScanners()" style="font-size: 12px; padding: 4px 8px; background: var(--gray-100); border: 1px solid var(--gray-300); border-radius: 4px; cursor: pointer;">Select All</button>
+                        <button type="button" onclick="deselectAllScanners()" style="font-size: 12px; padding: 4px 8px; background: var(--gray-100); border: 1px solid var(--gray-300); border-radius: 4px; cursor: pointer;">Deselect All</button>
+                        <button type="button" onclick="selectRecommendedScanners()" style="font-size: 12px; padding: 4px 8px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer;">Recommended</button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" id="scanSubmitBtn">
+                    <span id="scanSubmitText">Start Scan</span>
+                    <div class="spinner" id="scanSubmitSpinner" style="display: none;"></div>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration - auto-detect from current origin or use environment variable
+        const API_BASE_URL = window.API_BASE_URL || `${window.location.protocol}//${window.location.host}/api/v1`;
+
+        // Application State
+        let appState = {
+            user: null,
+            projects: [],
+            scans: [],
+            issues: [],
+            allIssues: [],
+            currentProject: null,
+            currentScan: null,
+            pollingIntervals: new Map()
+        };
+
+        // API Client
+        class WCAGV2API {
+            constructor() {
+                this.baseURL = API_BASE_URL;
+                this.token = localStorage.getItem('access_token');
+            }
+
+            async request(endpoint, options = {}) {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                };
+
+                if (this.token) {
+                    headers['Authorization'] = `Bearer ${this.token}`;
+                }
+
+                const response = await fetch(`${this.baseURL}${endpoint}`, {
+                    ...options,
+                    headers
+                });
+
+                if (response.status === 401) {
+                    this.token = null;
+                    localStorage.removeItem('access_token');
+                    showAuthScreen();
+                    throw new Error('Unauthorized');
+                }
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({}));
+                    throw new Error(error.detail || error.message || 'Request failed');
+                }
+
+                return response.json();
+            }
+
+            // Auth
+            async register(email, password, name) {
+                const data = await this.request('/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password, name, role: 'user' })
+                });
+                return data;
+            }
+
+            async login(email, password) {
+                const data = await this.request('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+                this.token = data.access_token;
+                localStorage.setItem('access_token', data.access_token);
+                return data;
+            }
+
+            async getCurrentUser() {
+                return this.request('/auth/me');
+            }
+
+            async logout() {
+                await this.request('/auth/logout', { method: 'POST' });
+                this.token = null;
+                localStorage.removeItem('access_token');
+            }
+
+            // Projects
+            async getProjects(skip = 0, limit = 50) {
+                return this.request(`/projects/?skip=${skip}&limit=${limit}`);
+            }
+
+            async createProject(data) {
+                return this.request('/projects/', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+            }
+
+            async updateProject(id, data) {
+                return this.request(`/projects/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(data)
+                });
+            }
+
+            async deleteProject(id) {
+                return this.request(`/projects/${id}`, { method: 'DELETE' });
+            }
+
+            // Scans
+            async createScan(projectId, config) {
+                return this.request(`/projects/${projectId}/scans`, {
+                    method: 'POST',
+                    body: JSON.stringify(config)
+                });
+            }
+
+            async getScans(filters = {}) {
+                const params = new URLSearchParams(filters);
+                return this.request(`/scans?${params}`);
+            }
+
+            async getScanStatus(scanId) {
+                return this.request(`/scans/${scanId}/status`);
+            }
+
+            async cancelScan(scanId) {
+                return this.request(`/scans/${scanId}/cancel`, { method: 'POST' });
+            }
+
+            // Issues
+            async getIssues(scanId, filters = {}) {
+                const params = new URLSearchParams({ scan_id: scanId, ...filters });
+                return this.request(`/issues/?${params}`);
+            }
+
+            // Reports
+            async downloadReport(scanId, format, openInNewTab = false) {
+                try {
+                    const headers = {
+                        'Authorization': `Bearer ${this.token}`
+                    };
+
+                    const response = await fetch(`${this.baseURL}/scans/${scanId}/reports/${format}`, {
+                        headers
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to download report');
+                    }
+
+                    // Get the content based on format
+                    let blob;
+                    let filename;
+
+                    if (format === 'json') {
+                        const data = await response.json();
+                        blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                        filename = `wcag_report_${scanId}.json`;
+                    } else if (format === 'html') {
+                        const html = await response.text();
+                        blob = new Blob([html], { type: 'text/html' });
+                        filename = `wcag_report_${scanId}.html`;
+
+                        // For HTML, optionally open in new tab instead of download
+                        if (openInNewTab) {
+                            const url = window.URL.createObjectURL(blob);
+                            window.open(url, '_blank');
+                            setTimeout(() => window.URL.revokeObjectURL(url), 100);
+                            return true;
+                        }
+                    } else if (format === 'csv') {
+                        const csv = await response.text();
+                        blob = new Blob([csv], { type: 'text/csv' });
+                        filename = `wcag_report_${scanId}.csv`;
+                    }
+
+                    // Create download link
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    return true;
+                } catch (error) {
+                    console.error('Download error:', error);
+                    throw error;
+                }
+            }
+        }
+
+        const api = new WCAGV2API();
+
+        // Initialize App
+        async function initApp() {
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                try {
+                    api.token = token;
+                    const user = await api.getCurrentUser();
+                    appState.user = user;
+                    showDashboard();
+                    await loadDashboardData();
+                } catch (error) {
+                    showAuthScreen();
+                }
+            } else {
+                showAuthScreen();
+            }
+        }
+
+        function showAuthScreen() {
+            document.getElementById('authContainer').style.display = 'flex';
+            document.getElementById('dashboardContainer').classList.remove('active');
+        }
+
+        function showDashboard() {
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('dashboardContainer').classList.add('active');
+            updateUserInfo();
+        }
+
+        function updateUserInfo() {
+            if (appState.user) {
+                document.getElementById('userName').textContent = appState.user.name || appState.user.email;
+                const avatar = appState.user.name ? appState.user.name.charAt(0).toUpperCase() : 'U';
+                document.getElementById('userAvatar').textContent = avatar;
+            }
+        }
+
+        async function loadDashboardData() {
+            await Promise.all([
+                loadProjects(),
+                loadScans()
+            ]);
+        }
+
+        // Authentication
+        function switchAuthTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+
+            if (tab === 'login') {
+                document.querySelectorAll('.auth-tab')[0].classList.add('active');
+                document.getElementById('loginForm').classList.add('active');
+            } else {
+                document.querySelectorAll('.auth-tab')[1].classList.add('active');
+                document.getElementById('registerForm').classList.add('active');
+            }
+            hideAuthError();
+        }
+
+        function showAuthError(message) {
+            const errorEl = document.getElementById('authError');
+            errorEl.textContent = message;
+            errorEl.classList.add('active');
+        }
+
+        function hideAuthError() {
+            document.getElementById('authError').classList.remove('active');
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            const btn = document.getElementById('loginBtn');
+            const btnText = document.getElementById('loginBtnText');
+            const spinner = document.getElementById('loginSpinner');
+
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            spinner.style.display = 'block';
+            hideAuthError();
+
+            try {
+                const data = await api.login(email, password);
+                appState.user = data.user;
+                showDashboard();
+                await loadDashboardData();
+                showToast('Login successful!', 'success');
+            } catch (error) {
+                showAuthError(error.message || 'Invalid email or password');
+            } finally {
+                btn.disabled = false;
+                btnText.style.display = 'block';
+                spinner.style.display = 'none';
+            }
+        }
+
+        async function handleRegister(event) {
+            event.preventDefault();
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const name = document.getElementById('registerName').value;
+
+            const btn = document.getElementById('registerBtn');
+            const btnText = document.getElementById('registerBtnText');
+            const spinner = document.getElementById('registerSpinner');
+
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            spinner.style.display = 'block';
+            hideAuthError();
+
+            try {
+                await api.register(email, password, name);
+                showToast('Account created successfully! Please login.', 'success');
+                switchAuthTab('login');
+                document.getElementById('loginEmail').value = email;
+            } catch (error) {
+                showAuthError(error.message || 'Registration failed');
+            } finally {
+                btn.disabled = false;
+                btnText.style.display = 'block';
+                spinner.style.display = 'none';
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                await api.logout();
+            } catch (error) {
+                // Ignore logout errors
+            }
+            showAuthScreen();
+            showToast('Logged out successfully', 'info');
+        }
+
+        // Tab Switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+
+            if (tabName === 'issues') {
+                populateScanFilter();
+            } else if (tabName === 'reports') {
+                loadReportsSection();
+            }
+        }
+
+        // Projects
+        async function loadProjects() {
+            try {
+                const data = await api.getProjects();
+                console.log('Loaded projects data:', data);
+                appState.projects = data.projects || data;
+                console.log('appState.projects:', appState.projects);
+                renderProjects();
+            } catch (error) {
+                console.error('Failed to load projects:', error);
+                showToast('Failed to load projects', 'error');
+            }
+        }
+
+        function renderProjects() {
+            const grid = document.getElementById('projectsGrid');
+            if (!appState.projects.length) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="empty-state-icon">📁</div>
+                        <div class="empty-state-title">No projects yet</div>
+                        <p>Create your first project to get started</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = appState.projects.map(project => `
+                <div class="project-card">
+                    <div class="project-header">
+                        <div>
+                            <div class="project-title">${escapeHtml(project.name)}</div>
+                            <a href="${escapeHtml(project.base_url)}" class="project-url" target="_blank">${escapeHtml(project.base_url)}</a>
+                        </div>
+                        <div class="project-actions">
+                            <button class="btn-icon" onclick="editProject('${project.id}')" title="Edit">✏️</button>
+                            <button class="btn-icon" onclick="deleteProject('${project.id}')" title="Delete">🗑️</button>
+                        </div>
+                    </div>
+                    ${project.description ? `<div class="project-description">${escapeHtml(project.description)}</div>` : ''}
+                    <div class="project-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">0</div>
+                            <div class="stat-label">Scans</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${project.settings?.wcag_level || 'AA'}</div>
+                            <div class="stat-label">WCAG Level</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openCreateProjectModal() {
+            document.getElementById('projectModalTitle').textContent = 'Create Project';
+            document.getElementById('projectForm').reset();
+            appState.currentProject = null;
+            document.getElementById('projectModal').classList.add('active');
+        }
+
+        function closeProjectModal() {
+            document.getElementById('projectModal').classList.remove('active');
+        }
+
+        async function handleProjectSubmit(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('projectName').value;
+            const base_url = document.getElementById('projectUrl').value;
+            const description = document.getElementById('projectDescription').value;
+            const wcag_level = document.getElementById('projectWcagLevel').value;
+
+            const data = {
+                name,
+                base_url,
+                description: description || undefined,
+                settings: { wcag_level }
+            };
+
+            const btn = document.getElementById('projectSubmitBtn');
+            const btnText = document.getElementById('projectSubmitText');
+            const spinner = document.getElementById('projectSubmitSpinner');
+
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            spinner.style.display = 'block';
+
+            try {
+                if (appState.currentProject) {
+                    await api.updateProject(appState.currentProject.id, data);
+                    showToast('Project updated successfully', 'success');
+                } else {
+                    await api.createProject(data);
+                    showToast('Project created successfully', 'success');
+                }
+                closeProjectModal();
+                await loadProjects();
+            } catch (error) {
+                showToast(error.message || 'Failed to save project', 'error');
+            } finally {
+                btn.disabled = false;
+                btnText.style.display = 'block';
+                spinner.style.display = 'none';
+            }
+        }
+
+        async function editProject(id) {
+            const project = appState.projects.find(p => p.id === id);
+            if (!project) return;
+
+            appState.currentProject = project;
+            document.getElementById('projectModalTitle').textContent = 'Edit Project';
+            document.getElementById('projectName').value = project.name;
+            document.getElementById('projectUrl').value = project.base_url;
+            document.getElementById('projectDescription').value = project.description || '';
+            document.getElementById('projectWcagLevel').value = project.settings?.wcag_level || 'AA';
+            document.getElementById('projectModal').classList.add('active');
+        }
+
+        async function deleteProject(id) {
+            if (!confirm('Are you sure you want to delete this project?')) return;
+
+            try {
+                await api.deleteProject(id);
+                showToast('Project deleted successfully', 'success');
+                await loadProjects();
+            } catch (error) {
+                showToast(error.message || 'Failed to delete project', 'error');
+            }
+        }
+
+        // Scans
+        async function loadScans() {
+            try {
+                const data = await api.getScans();
+                appState.scans = data.scans || data;
+                renderScans();
+                startPollingActiveScans();
+            } catch (error) {
+                showToast('Failed to load scans', 'error');
+            }
+        }
+
+        function renderScans() {
+            const list = document.getElementById('scansList');
+            if (!appState.scans.length) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <div class="empty-state-title">No scans yet</div>
+                        <p>Create your first scan to analyze a website</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = appState.scans.map(scan => {
+                const project = appState.projects.find(p => p.id === scan.project_id);
+                const statusClass = scan.status.toLowerCase();
+                const isActive = ['queued', 'crawling', 'scanning'].includes(statusClass);
+                const progress = scan.progress || {};
+                const summary = scan.summary || {};
+                const byImpact = summary.by_impact || {};
+
+                return `
+                    <div class="scan-card ${statusClass}">
+                        <div class="scan-header">
+                            <div class="scan-info">
+                                <h3>${project ? escapeHtml(project.name) : 'Unknown Project'}</h3>
+                                <div class="scan-meta">
+                                    ${scan.scan_type === 'full' ? 'Full Site Scan' : 'Single Page'} •
+                                    Started ${new Date(scan.created_at).toLocaleString()}
+                                </div>
+                            </div>
+                            <span class="status-badge ${statusClass}">${scan.status}</span>
+                        </div>
+                        ${isActive ? `
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" style="width: ${calculateProgress(scan)}%"></div>
+                            </div>
+                            <div class="scan-meta">${progress.current_page || 'Initializing...'}</div>
+                        ` : ''}
+                        ${scan.status === 'completed' && summary.total_issues !== undefined ? `
+                            <div class="scan-stats-grid">
+                                <div class="scan-stat">
+                                    <div class="scan-stat-value critical">${byImpact.critical || 0}</div>
+                                    <div class="scan-stat-label">Critical</div>
+                                </div>
+                                <div class="scan-stat">
+                                    <div class="scan-stat-value serious">${byImpact.serious || 0}</div>
+                                    <div class="scan-stat-label">Serious</div>
+                                </div>
+                                <div class="scan-stat">
+                                    <div class="scan-stat-value moderate">${byImpact.moderate || 0}</div>
+                                    <div class="scan-stat-label">Moderate</div>
+                                </div>
+                                <div class="scan-stat">
+                                    <div class="scan-stat-value minor">${byImpact.minor || 0}</div>
+                                    <div class="scan-stat-label">Minor</div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        ${isActive ? `
+                            <button class="btn btn-outline" style="margin-top: 12px;" onclick="cancelScan('${scan.id}')">Cancel Scan</button>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function calculateProgress(scan) {
+            const progress = scan.progress || {};
+            if (progress.total_pages && progress.pages_scanned) {
+                return Math.round((progress.pages_scanned / progress.total_pages) * 100);
+            }
+            return 10;
+        }
+
+        function startPollingActiveScans() {
+            // Clear existing intervals
+            appState.pollingIntervals.forEach(interval => clearInterval(interval));
+            appState.pollingIntervals.clear();
+
+            // Start polling for active scans
+            appState.scans.forEach(scan => {
+                if (['queued', 'crawling', 'scanning'].includes(scan.status.toLowerCase())) {
+                    const interval = setInterval(() => pollScanStatus(scan.id), 2000);
+                    appState.pollingIntervals.set(scan.id, interval);
+                }
+            });
+        }
+
+        async function pollScanStatus(scanId) {
+            try {
+                const status = await api.getScanStatus(scanId);
+                const scan = appState.scans.find(s => s.id === scanId);
+                if (scan) {
+                    Object.assign(scan, status);
+                    renderScans();
+
+                    if (['completed', 'failed', 'cancelled'].includes(status.status.toLowerCase())) {
+                        const interval = appState.pollingIntervals.get(scanId);
+                        if (interval) {
+                            clearInterval(interval);
+                            appState.pollingIntervals.delete(scanId);
+                        }
+                        if (status.status.toLowerCase() === 'completed') {
+                            showToast('Scan completed successfully!', 'success');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to poll scan status:', error);
+            }
+        }
+
+        function openCreateScanModal() {
+            populateProjectSelect();
+            document.getElementById('scanForm').reset();
+            document.getElementById('scanModal').classList.add('active');
+        }
+
+        function closeScanModal() {
+            document.getElementById('scanModal').classList.remove('active');
+        }
+
+        function populateProjectSelect() {
+            const select = document.getElementById('scanProject');
+            console.log('Populating project select. Projects:', appState.projects);
+
+            if (!appState.projects || appState.projects.length === 0) {
+                select.innerHTML = '<option value="">No projects available</option>';
+                return;
+            }
+
+            select.innerHTML = '<option value="">Select a project...</option>' +
+                appState.projects.map(p => {
+                    console.log('Project:', p.id, p.name);
+                    return `<option value="${p.id}">${escapeHtml(p.name)}</option>`;
+                }).join('');
+        }
+
+        // Scanner selection helper functions
+        function selectAllScanners() {
+            document.querySelectorAll('.scanner-checkbox').forEach(cb => cb.checked = true);
+        }
+
+        function deselectAllScanners() {
+            document.querySelectorAll('.scanner-checkbox').forEach(cb => cb.checked = false);
+        }
+
+        function selectRecommendedScanners() {
+            // Recommended scanners: fast and reliable
+            const recommended = ['axe', 'html_validator', 'contrast', 'keyboard', 'aria', 'forms'];
+            document.querySelectorAll('.scanner-checkbox').forEach(cb => {
+                cb.checked = recommended.includes(cb.value);
+            });
+        }
+
+        async function handleScanSubmit(event) {
+            event.preventDefault();
+
+            const projectId = document.getElementById('scanProject').value;
+
+            // Validate project selection
+            if (!projectId || projectId === '') {
+                showToast('Please select a project', 'error');
+                return;
+            }
+
+            // Collect selected scanners
+            const selectedScanners = Array.from(document.querySelectorAll('.scanner-checkbox:checked'))
+                .map(cb => cb.value);
+
+            if (selectedScanners.length === 0) {
+                showToast('Please select at least one scanner', 'error');
+                return;
+            }
+
+            const scanType = document.getElementById('scanType').value;
+            const maxPages = parseInt(document.getElementById('scanMaxPages').value);
+            const maxDepth = parseInt(document.getElementById('scanMaxDepth').value);
+
+            const config = {
+                scan_type: scanType,
+                max_pages: maxPages,
+                max_depth: maxDepth,
+                scanners: selectedScanners
+            };
+
+            const btn = document.getElementById('scanSubmitBtn');
+            const btnText = document.getElementById('scanSubmitText');
+            const spinner = document.getElementById('scanSubmitSpinner');
+
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            spinner.style.display = 'block';
+
+            try {
+                console.log('Creating scan for project:', projectId, 'with config:', config);
+                await api.createScan(projectId, config);
+                showToast('Scan started successfully', 'success');
+                closeScanModal();
+                await loadScans();
+                switchTab({target: document.querySelectorAll('.tab')[1]}, 'scans');
+            } catch (error) {
+                console.error('Scan creation error:', error);
+                showToast(error.message || 'Failed to create scan', 'error');
+            } finally {
+                btn.disabled = false;
+                btnText.style.display = 'block';
+                spinner.style.display = 'none';
+            }
+        }
+
+        async function cancelScan(scanId) {
+            if (!confirm('Are you sure you want to cancel this scan?')) return;
+
+            try {
+                await api.cancelScan(scanId);
+                showToast('Scan cancelled', 'info');
+                await loadScans();
+            } catch (error) {
+                showToast(error.message || 'Failed to cancel scan', 'error');
+            }
+        }
+
+        // Issues
+        function populateScanFilter() {
+            const select = document.getElementById('issueScanFilter');
+            const completedScans = appState.scans.filter(s => s.status.toLowerCase() === 'completed');
+            select.innerHTML = '<option value="">Select a scan...</option>' +
+                completedScans.map(s => {
+                    const project = appState.projects.find(p => p.id === s.project_id);
+                    return `<option value="${s.id}">${project ? escapeHtml(project.name) : 'Unknown'} - ${new Date(s.created_at).toLocaleDateString()}</option>`;
+                }).join('');
+        }
+
+        async function loadIssues() {
+            const scanId = document.getElementById('issueScanFilter').value;
+            if (!scanId) {
+                document.getElementById('issuesList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <div class="empty-state-title">Select a scan to view issues</div>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                const data = await api.getIssues(scanId);
+                appState.allIssues = data.issues || data;
+                appState.issues = appState.allIssues;
+                renderIssues();
+            } catch (error) {
+                showToast('Failed to load issues', 'error');
+            }
+        }
+
+        function filterIssues() {
+            const impactFilter = document.getElementById('issueImpactFilter').value;
+            const wcagFilter = document.getElementById('issueWcagFilter').value;
+            const principleFilter = document.getElementById('issuePrincipleFilter').value;
+
+            appState.issues = appState.allIssues.filter(issue => {
+                if (impactFilter && issue.impact.toLowerCase() !== impactFilter.toLowerCase()) return false;
+                if (wcagFilter && issue.wcag_level !== wcagFilter) return false;
+                if (principleFilter && issue.principle.toLowerCase() !== principleFilter.toLowerCase()) return false;
+                return true;
+            });
+
+            renderIssues();
+        }
+
+        function renderIssues() {
+            const list = document.getElementById('issuesList');
+            if (!appState.issues.length) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <div class="empty-state-title">No issues found</div>
+                        <p>No accessibility issues match the selected filters</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = appState.issues.map((issue, idx) => `
+                <div class="issue-card ${issue.impact.toLowerCase()}">
+                    <div class="issue-header">
+                        <div class="issue-title">${escapeHtml(issue.description)}</div>
+                        <span class="impact-badge ${issue.impact.toLowerCase()}">${issue.impact}</span>
+                    </div>
+                    <div class="issue-meta">
+                        <span>WCAG: ${issue.wcag_criteria.join(', ')}</span>
+                        <span>Level: ${issue.wcag_level}</span>
+                        <span>Principle: ${issue.principle}</span>
+                        <span>Detected by: ${issue.detected_by.join(', ')}</span>
+                    </div>
+                    ${issue.help_text ? `<p style="font-size: 0.85rem; color: var(--gray-600); margin-top: 8px;">${escapeHtml(issue.help_text)}</p>` : ''}
+                    <button class="btn btn-outline" style="margin-top: 12px; font-size: 0.85rem;" onclick="toggleIssueInstances(${idx})">
+                        <span id="issueToggle${idx}">Show ${issue.instances.length} Instance${issue.instances.length !== 1 ? 's' : ''}</span>
+                    </button>
+                    <div class="issue-instances" id="issueInstances${idx}">
+                        ${issue.instances.slice(0, 5).map(inst => `
+                            <div class="instance-item">
+                                <div class="instance-selector">${escapeHtml(inst.selector)}</div>
+                                ${inst.html ? `<div class="instance-html">${escapeHtml(inst.html.substring(0, 200))}</div>` : ''}
+                            </div>
+                        `).join('')}
+                        ${issue.instances.length > 5 ? `<p style="text-align: center; color: var(--gray-600); font-size: 0.85rem;">... and ${issue.instances.length - 5} more</p>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleIssueInstances(idx) {
+            const instances = document.getElementById(`issueInstances${idx}`);
+            const toggle = document.getElementById(`issueToggle${idx}`);
+            const count = appState.issues[idx].instances.length;
+
+            if (instances.classList.contains('expanded')) {
+                instances.classList.remove('expanded');
+                toggle.textContent = `Show ${count} Instance${count !== 1 ? 's' : ''}`;
+            } else {
+                instances.classList.add('expanded');
+                toggle.textContent = 'Hide Instances';
+            }
+        }
+
+        // Reports
+        function loadReportsSection() {
+            const content = document.getElementById('reportsContent');
+            const completedScans = appState.scans.filter(s => s.status.toLowerCase() === 'completed');
+
+            if (!completedScans.length) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <div class="empty-state-title">No completed scans</div>
+                        <p>Reports are available for completed scans</p>
+                    </div>
+                `;
+                return;
+            }
+
+            content.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <label for="reportScanSelect" style="display: block; margin-bottom: 8px; font-weight: 600;">Select a scan to download report:</label>
+                    <select id="reportScanSelect" onchange="showReportDownloads(this.value)" style="width: 100%; padding: 12px; border: 1px solid var(--gray-300); border-radius: 8px; font-size: 14px;">
+                        <option value="">Choose a scan...</option>
+                        ${completedScans.map(scan => {
+                            const project = appState.projects.find(p => p.id === scan.project_id);
+                            const date = new Date(scan.completed_at || scan.created_at).toLocaleDateString();
+                            return `<option value="${scan.id}">${escapeHtml(project ? project.name : 'Unknown')} - ${date}</option>`;
+                        }).join('')}
+                    </select>
+                </div>
+                <div id="reportDownloads"></div>
+            `;
+        }
+
+        function showReportDownloads(scanId) {
+            const container = document.getElementById('reportDownloads');
+
+            if (!scanId) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const scan = appState.scans.find(s => s.id === scanId);
+            const project = appState.projects.find(p => p.id === scan.project_id);
+
+            container.innerHTML = `
+                <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: var(--shadow);">
+                    <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--gray-900);">Download Report</h3>
+
+                    <div style="background: var(--gray-50); padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+                        <div style="font-weight: 600; margin-bottom: 4px;">${escapeHtml(project ? project.name : 'Unknown')}</div>
+                        <div style="font-size: 14px; color: var(--gray-600);">
+                            Scan completed: ${new Date(scan.completed_at || scan.created_at).toLocaleString()}
+                        </div>
+                        ${scan.summary ? `
+                            <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;">
+                                <div>
+                                    <div style="font-size: 12px; color: var(--gray-600);">Total Issues</div>
+                                    <div style="font-size: 20px; font-weight: 600;">${scan.summary.total_issues || 0}</div>
+                                </div>
+                                ${scan.scores ? `
+                                    <div>
+                                        <div style="font-size: 12px; color: var(--gray-600);">Score</div>
+                                        <div style="font-size: 20px; font-weight: 600;">${Math.round(scan.scores.overall || 0)}%</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div style="display: grid; gap: 12px;">
+                        <button onclick="downloadReport('${scanId}', 'json')" class="btn btn-primary" style="justify-content: center;">
+                            <span>📄</span>
+                            <span>Download JSON Report</span>
+                        </button>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <button onclick="viewReport('${scanId}', 'html')" class="btn btn-primary" style="justify-content: center;">
+                                <span>👁️</span>
+                                <span>View HTML</span>
+                            </button>
+                            <button onclick="downloadReport('${scanId}', 'html')" class="btn btn-primary" style="justify-content: center;">
+                                <span>⬇️</span>
+                                <span>Download HTML</span>
+                            </button>
+                        </div>
+
+                        <button onclick="downloadReport('${scanId}', 'csv')" class="btn btn-primary" style="justify-content: center;">
+                            <span>📊</span>
+                            <span>Download CSV Report</span>
+                        </button>
+                    </div>
+
+                    <div style="margin-top: 16px; padding: 12px; background: var(--gray-50); border-radius: 8px; font-size: 14px; color: var(--gray-600);">
+                        <strong>Report Formats:</strong>
+                        <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                            <li><strong>JSON</strong> - Machine-readable format for integrations</li>
+                            <li><strong>HTML</strong> - Formatted report for viewing in browser</li>
+                            <li><strong>CSV</strong> - Spreadsheet format for analysis</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function downloadReport(scanId, format) {
+            try {
+                showToast(`Preparing ${format.toUpperCase()} report...`, 'info');
+                await api.downloadReport(scanId, format, false);
+                showToast(`${format.toUpperCase()} report downloaded successfully!`, 'success');
+            } catch (error) {
+                console.error('Download failed:', error);
+                showToast(`Failed to download ${format.toUpperCase()} report. Please try again.`, 'error');
+            }
+        }
+
+        async function viewReport(scanId, format) {
+            try {
+                showToast(`Opening ${format.toUpperCase()} report in new tab...`, 'info');
+                await api.downloadReport(scanId, format, true);
+            } catch (error) {
+                console.error('View failed:', error);
+                showToast(`Failed to open ${format.toUpperCase()} report. Please try again.`, 'error');
+            }
+        }
+
+        // Toast Notifications
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div class="toast-message">${escapeHtml(message)}</div>
+                <button class="btn-close" onclick="this.parentElement.remove()">&times;</button>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => toast.remove(), 5000);
+        }
+
+        // Utility
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-"""Scanner service wrapper for existing scanners."""
+"""Scanner service wrapper for existing V1 scanners."""
 
 import sys
 import asyncio
@@ -9,14 +9,38 @@ from datetime import datetime
 # Add parent src to path to import existing scanners
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from playwright.async_api import Page
-
 from scanner_v2.utils.logger import get_logger
 from scanner_v2.utils.helpers import utc_now, calculate_duration_ms
 from scanner_v2.utils.exceptions import ScannerException, ScannerExecutionError, ScannerTimeoutError
 from scanner_v2.database.models import ImpactLevel, WCAGLevel, Principle
+from scanner_v2.services.screenshot_service import screenshot_service
+
+# Import V1 scanners with error handling
+try:
+    from src.scanners import (
+        AxeScanner, HTMLValidatorScanner, ContrastChecker, KeyboardScanner,
+        ARIAScanner, FormsScanner, SEOAccessibilityScanner, LinkTextScanner,
+        ImageAltScanner, MediaScanner, TouchTargetScanner, ReadabilityScanner,
+        InteractiveScanner, Pa11yScanner, LighthouseScanner
+    )
+    from src.utils.browser import BrowserManager
+    V1_SCANNERS_AVAILABLE = True
+except ImportError as e:
+    V1_SCANNERS_AVAILABLE = False
+    IMPORT_ERROR = str(e)
+    # Create placeholder to avoid NameError
+    BrowserManager = None
+    AxeScanner = HTMLValidatorScanner = ContrastChecker = None
+    KeyboardScanner = ARIAScanner = FormsScanner = None
+    SEOAccessibilityScanner = LinkTextScanner = ImageAltScanner = None
+    MediaScanner = TouchTargetScanner = ReadabilityScanner = None
+    InteractiveScanner = Pa11yScanner = LighthouseScanner = None
 
 logger = get_logger("scanner_service")
+
+if not V1_SCANNERS_AVAILABLE:
+    logger.error(f"Failed to import V1 scanners: {IMPORT_ERROR}")
+    logger.error("V1 scanner functionality will be unavailable. Please ensure all scanner dependencies are installed.")
 
 
 class ScannerResult:
@@ -51,77 +75,156 @@ class ScannerResult:
 
 
 class ScannerService:
-    """Service for running accessibility scanners."""
+    """Service for running accessibility scanners using V1 implementations."""
 
     def __init__(self):
         """Initialize scanner service."""
-        self.available_scanners = ["axe", "pa11y", "lighthouse"]
+        self.available_scanners = [
+            "axe", "html_validator", "contrast", "keyboard", "aria", "forms",
+            "seo", "link_text", "image_alt", "media", "touch_target",
+            "readability", "interactive", "pa11y", "lighthouse"
+        ]
+
+        # Map scanner names to classes
+        self.scanner_classes = {
+            "axe": AxeScanner,
+            "html_validator": HTMLValidatorScanner,
+            "contrast": ContrastChecker,
+            "keyboard": KeyboardScanner,
+            "aria": ARIAScanner,
+            "forms": FormsScanner,
+            "seo": SEOAccessibilityScanner,
+            "link_text": LinkTextScanner,
+            "image_alt": ImageAltScanner,
+            "media": MediaScanner,
+            "touch_target": TouchTargetScanner,
+            "readability": ReadabilityScanner,
+            "interactive": InteractiveScanner,
+            "pa11y": Pa11yScanner,
+            "lighthouse": LighthouseScanner
+        }
+
+        # Scanners that don't accept browser_manager (use subprocess)
+        self.subprocess_scanners = ["pa11y", "lighthouse"]
 
     async def scan_page(
         self,
-        page: Page,
         url: str,
+        scan_id: str,
+        page_id: str,
         scanners: Optional[List[str]] = None,
+        screenshot_enabled: bool = True,
         timeout: int = 30000
-    ) -> Dict[str, ScannerResult]:
+    ) -> Dict[str, Any]:
         """
-        Scan page with specified scanners.
+        Scan page with specified scanners using V1 implementations with shared browser.
 
         Args:
-            page: Playwright page instance
             url: URL being scanned
+            scan_id: Scan ID for screenshot organization
+            page_id: Page ID for screenshot naming
             scanners: List of scanner names to run (default: all)
+            screenshot_enabled: Whether to capture screenshot
             timeout: Timeout in milliseconds
 
         Returns:
-            Dictionary of scanner results
+            Dictionary containing scanner results and screenshot path
         """
+        # Check if V1 scanners are available
+        if not V1_SCANNERS_AVAILABLE:
+            raise ScannerException(
+                f"V1 scanners are not available. Import error: {IMPORT_ERROR}. "
+                "Please install all required dependencies."
+            )
+
         if scanners is None:
             scanners = self.available_scanners
 
         logger.info(f"Scanning {url} with scanners: {', '.join(scanners)}")
 
+        # Create shared browser manager for all scanners
+        browser_manager = BrowserManager(stealth_mode=True)
+        await browser_manager.start()
+
         results = {}
+        screenshot_path = None
+        page_title = None
+        status_code = None
 
-        # Run scanners concurrently
-        tasks = []
-        for scanner_name in scanners:
-            if scanner_name in self.available_scanners:
-                tasks.append(self._run_scanner(scanner_name, page, url, timeout))
-            else:
-                logger.warning(f"Unknown scanner: {scanner_name}")
+        try:
+            # Get page once and reuse for all operations
+            async with browser_manager.get_page(url) as page:
+                # Capture page title and status
+                try:
+                    page_title = await page.title()
+                    # Status code is not directly available in context manager
+                    # but we can assume 200 if page loaded
+                    status_code = 200
+                except Exception as e:
+                    logger.warning(f"Failed to get page info: {e}")
 
-        scanner_results = await asyncio.gather(*tasks, return_exceptions=True)
+                # Capture screenshot if enabled
+                if screenshot_enabled:
+                    try:
+                        screenshot_path = await screenshot_service.capture_full_page(
+                            page, scan_id, page_id, url
+                        )
+                        logger.info(f"Screenshot captured: {screenshot_path}")
+                    except Exception as e:
+                        logger.error(f"Screenshot capture failed: {e}")
 
-        # Process results
-        for scanner_name, result in zip(scanners, scanner_results):
-            if isinstance(result, Exception):
-                logger.error(f"{scanner_name} failed: {result}")
-                results[scanner_name] = ScannerResult(
-                    scanner_name=scanner_name,
-                    success=False,
-                    violations=[],
-                    error=str(result)
-                )
-            else:
-                results[scanner_name] = result
+                # Now run scanners sequentially with the SAME browser instance
+                # We'll navigate to the page for each scanner to ensure fresh state
+                for scanner_name in scanners:
+                    if scanner_name not in self.available_scanners:
+                        logger.warning(f"Unknown scanner: {scanner_name} - skipping")
+                        continue
 
-        return results
+                    logger.info(f"Running scanner: {scanner_name}")
+
+                    try:
+                        result = await self._run_scanner(
+                            scanner_name, url, browser_manager, timeout
+                        )
+                        results[scanner_name] = result
+                        logger.info(
+                            f"{scanner_name} scan returned: {len(result.violations)} violations, "
+                            f"success={result.success}"
+                        )
+                    except Exception as e:
+                        logger.error(f"{scanner_name} failed with exception: {e}")
+                        results[scanner_name] = ScannerResult(
+                            scanner_name=scanner_name,
+                            success=False,
+                            violations=[],
+                            error=str(e)
+                        )
+
+        finally:
+            # Always cleanup browser
+            await browser_manager.stop()
+
+        return {
+            "scanner_results": results,
+            "screenshot_path": screenshot_path,
+            "title": page_title,
+            "status_code": status_code
+        }
 
     async def _run_scanner(
         self,
         scanner_name: str,
-        page: Page,
         url: str,
+        browser_manager: BrowserManager,
         timeout: int
     ) -> ScannerResult:
         """
-        Run individual scanner.
+        Run individual V1 scanner with shared browser.
 
         Args:
             scanner_name: Scanner name
-            page: Playwright page
             url: URL
+            browser_manager: Shared browser manager instance (not used for subprocess scanners)
             timeout: Timeout in milliseconds
 
         Returns:
@@ -130,21 +233,45 @@ class ScannerService:
         start_time = utc_now()
 
         try:
-            if scanner_name == "axe":
-                result = await self._run_axe(page, url, timeout)
-            elif scanner_name == "pa11y":
-                result = await self._run_pa11y(page, url, timeout)
-            elif scanner_name == "lighthouse":
-                result = await self._run_lighthouse(page, url, timeout)
-            else:
+            scanner_class = self.scanner_classes.get(scanner_name)
+            if not scanner_class:
                 raise ScannerExecutionError(f"Unknown scanner: {scanner_name}")
 
+            # Create scanner instance
+            # Subprocess scanners (Pa11y, Lighthouse) don't accept browser_manager
+            if scanner_name in self.subprocess_scanners:
+                scanner = scanner_class()
+                logger.info(f"{scanner_name} uses subprocess (runs its own Chrome instance)")
+            else:
+                scanner = scanner_class(browser_manager=browser_manager)
+
+            # Run scanner with timeout (V1 scanners accept url and optional html_content)
+            violations, tool_status = await asyncio.wait_for(
+                scanner.run(url, None),  # html_content=None, let scanner fetch
+                timeout=timeout / 1000  # Convert ms to seconds
+            )
+
             duration_ms = calculate_duration_ms(start_time)
-            result.duration_ms = duration_ms
 
-            logger.info(f"{scanner_name} scan complete: {len(result.violations)} violations in {duration_ms}ms")
+            # Convert V1 violations to V2 format
+            normalized_violations = self._normalize_v1_violations(violations, scanner_name)
 
-            return result
+            logger.info(f"{scanner_name} scan complete: {len(normalized_violations)} violations in {duration_ms}ms")
+
+            return ScannerResult(
+                scanner_name=scanner_name,
+                success=tool_status.status == "success",
+                violations=normalized_violations,
+                raw_result={
+                    "tool_status": {
+                        "rules_checked": tool_status.rules_checked,
+                        "rules_passed": tool_status.rules_passed,
+                        "rules_failed": tool_status.rules_failed,
+                        "score": tool_status.score
+                    }
+                },
+                duration_ms=duration_ms
+            )
 
         except asyncio.TimeoutError:
             duration_ms = calculate_duration_ms(start_time)
@@ -156,104 +283,17 @@ class ScannerService:
             logger.error(f"{scanner_name} scan failed: {e}")
             raise ScannerExecutionError(f"{scanner_name} failed: {e}")
 
-    async def _run_axe(self, page: Page, url: str, timeout: int) -> ScannerResult:
+    def _normalize_v1_violations(
+        self,
+        violations: List[Any],
+        scanner_name: str
+    ) -> List[Dict[str, Any]]:
         """
-        Run axe-core scanner.
+        Normalize V1 violations to V2 format.
 
         Args:
-            page: Playwright page
-            url: URL
-            timeout: Timeout
-
-        Returns:
-            Scanner result
-        """
-        try:
-            # Inject axe-core
-            await page.add_script_tag(url="https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.8.2/axe.min.js")
-
-            # Run axe
-            axe_results = await page.evaluate("""
-                async () => {
-                    return await axe.run();
-                }
-            """)
-
-            # Normalize violations
-            violations = self._normalize_axe_violations(axe_results.get("violations", []))
-
-            return ScannerResult(
-                scanner_name="axe",
-                success=True,
-                violations=violations,
-                raw_result=axe_results
-            )
-
-        except Exception as e:
-            logger.error(f"axe scan failed: {e}")
-            return ScannerResult(
-                scanner_name="axe",
-                success=False,
-                violations=[],
-                error=str(e)
-            )
-
-    async def _run_pa11y(self, page: Page, url: str, timeout: int) -> ScannerResult:
-        """
-        Run pa11y scanner.
-
-        Args:
-            page: Playwright page
-            url: URL
-            timeout: Timeout
-
-        Returns:
-            Scanner result
-        """
-        # Note: pa11y requires node.js and is harder to integrate directly
-        # For now, return empty result with note
-        # In production, you would call pa11y CLI or use pa11y as node module
-
-        logger.info("pa11y scanner - skipping (requires node.js integration)")
-
-        return ScannerResult(
-            scanner_name="pa11y",
-            success=True,
-            violations=[],
-            raw_result={"note": "pa11y integration pending"}
-        )
-
-    async def _run_lighthouse(self, page: Page, url: str, timeout: int) -> ScannerResult:
-        """
-        Run Lighthouse accessibility audit.
-
-        Args:
-            page: Playwright page
-            url: URL
-            timeout: Timeout
-
-        Returns:
-            Scanner result
-        """
-        # Note: Lighthouse requires separate process
-        # For now, return empty result
-        # In production, you would use lighthouse CLI or lighthouse API
-
-        logger.info("lighthouse scanner - skipping (requires lighthouse integration)")
-
-        return ScannerResult(
-            scanner_name="lighthouse",
-            success=True,
-            violations=[],
-            raw_result={"note": "lighthouse integration pending"}
-        )
-
-    def _normalize_axe_violations(self, violations: List[Dict]) -> List[Dict[str, Any]]:
-        """
-        Normalize axe-core violations to common format.
-
-        Args:
-            violations: Raw axe violations
+            violations: V1 violation objects
+            scanner_name: Scanner name
 
         Returns:
             Normalized violations
@@ -261,64 +301,54 @@ class ScannerService:
         normalized = []
 
         for violation in violations:
-            # Map axe impact to our impact levels
+            # Map V1 Impact enum to V2 format
             impact_map = {
-                "critical": ImpactLevel.CRITICAL,
-                "serious": ImpactLevel.SERIOUS,
-                "moderate": ImpactLevel.MODERATE,
-                "minor": ImpactLevel.MINOR,
+                "critical": ImpactLevel.CRITICAL.value,
+                "serious": ImpactLevel.SERIOUS.value,
+                "moderate": ImpactLevel.MODERATE.value,
+                "minor": ImpactLevel.MINOR.value,
             }
 
-            impact = impact_map.get(violation.get("impact", "moderate"), ImpactLevel.MODERATE)
+            impact_str = violation.impact.value if hasattr(violation.impact, 'value') else str(violation.impact)
+            impact = impact_map.get(impact_str.lower(), ImpactLevel.MODERATE.value)
 
-            # Extract WCAG tags
-            wcag_criteria = []
-            for tag in violation.get("tags", []):
-                if tag.startswith("wcag"):
-                    # Extract criterion number from tag like "wcag111" or "wcag143"
-                    criterion_num = tag.replace("wcag", "")
-                    if len(criterion_num) >= 3:
-                        # Format as X.X.X
-                        formatted = f"{criterion_num[0]}.{criterion_num[1]}.{criterion_num[2:]}"
-                        wcag_criteria.append(formatted)
+            # Get WCAG level
+            wcag_level = WCAGLevel.AA.value  # Default
+            if violation.wcag_level:
+                wcag_level_str = violation.wcag_level.value if hasattr(violation.wcag_level, 'value') else str(violation.wcag_level)
+                wcag_level = wcag_level_str
 
-            # Determine WCAG level and principle
-            wcag_level = WCAGLevel.AA  # Default
-            if "wcag2a" in violation.get("tags", []):
-                wcag_level = WCAGLevel.A
-            elif "wcag2aaa" in violation.get("tags", []):
-                wcag_level = WCAGLevel.AAA
-
-            # Determine principle from criterion
-            principle = Principle.PERCEIVABLE  # Default
-            if wcag_criteria:
-                first_criterion = wcag_criteria[0]
+            # Determine principle from WCAG criteria
+            principle = Principle.PERCEIVABLE.value  # Default
+            if violation.wcag_criteria:
+                first_criterion = violation.wcag_criteria[0]
                 if first_criterion.startswith("2."):
-                    principle = Principle.OPERABLE
+                    principle = Principle.OPERABLE.value
                 elif first_criterion.startswith("3."):
-                    principle = Principle.UNDERSTANDABLE
+                    principle = Principle.UNDERSTANDABLE.value
                 elif first_criterion.startswith("4."):
-                    principle = Principle.ROBUST
+                    principle = Principle.ROBUST.value
 
-            # Extract instances
+            # Convert instances
             instances = []
-            for node in violation.get("nodes", []):
+            for instance in violation.instances:
                 instances.append({
-                    "selector": node.get("target", [""])[0] if node.get("target") else "",
-                    "html": node.get("html", ""),
-                    "failure_summary": node.get("failureSummary", ""),
+                    "selector": instance.selector or "",
+                    "html": instance.html or "",
+                    "failure_summary": instance.fix_suggestion or "",
                 })
 
             normalized.append({
-                "rule_id": violation.get("id"),
-                "description": violation.get("description"),
-                "help": violation.get("help"),
-                "help_url": violation.get("helpUrl"),
-                "impact": impact.value,
-                "wcag_criteria": wcag_criteria,
-                "wcag_level": wcag_level.value,
-                "principle": principle.value,
+                "rule_id": violation.rule_id,
+                "description": violation.description,
+                "help": violation.help_text,
+                "help_url": violation.help_url or "",
+                "impact": impact,
+                "wcag_criteria": violation.wcag_criteria or [],
+                "wcag_level": wcag_level,
+                "principle": principle,
                 "instances": instances,
+                "detected_by": [scanner_name]  # Wrap in list as Issue model expects List[str]
             })
 
         return normalized

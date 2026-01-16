@@ -49,8 +49,10 @@ class ProjectResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        populate_by_name = True
+    model_config = {
+        "populate_by_name": True,
+        "from_attributes": True
+    }
 
 
 class ProjectListResponse(BaseModel):
@@ -58,5 +60,5 @@ class ProjectListResponse(BaseModel):
 
     projects: List[ProjectResponse]
     total: int
-    page: int
-    page_size: int
+    skip: int
+    limit: int

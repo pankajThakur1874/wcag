@@ -3,8 +3,6 @@
 from typing import Dict, List, Any, Optional, Callable
 from datetime import datetime
 
-from playwright.async_api import async_playwright, Browser
-
 from scanner_v2.utils.logger import get_logger
 from scanner_v2.utils.helpers import utc_now, calculate_duration_ms, generate_id
 from scanner_v2.database.models import ScanStatus, WCAGLevel
@@ -125,7 +123,7 @@ class ScanOrchestrator:
                 }
             )
 
-            logger.info(f"Scan complete: {results['total_issues']} issues, score: {scores['overall']}")
+            logger.info(f"Scan complete: {summary['total_issues']} issues, score: {scores['overall']}")
 
             return results
 
@@ -192,6 +190,8 @@ class ScanOrchestrator:
         """
         Scan multiple pages.
 
+        Note: V1 scanners now handle browser creation internally with shared instances.
+
         Args:
             urls: List of URLs to scan
             scan_id: Scan ID
@@ -203,46 +203,36 @@ class ScanOrchestrator:
         """
         results = []
 
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(
-                headless=config.get("headless", True)
+        # Create page scanner (no browser needed, V1 handles it)
+        page_scanner = PageScanner(
+            scanners=config.get("scanners", ["axe"]),
+            screenshot_enabled=config.get("screenshot_enabled", True),
+            timeout=config.get("page_timeout", 30000)
+        )
+
+        for i, url in enumerate(urls):
+            logger.info(f"Scanning page {i+1}/{len(urls)}: {url}")
+
+            # Scan page (scanner_service creates and manages browser internally)
+            page_result = await page_scanner.scan_page(
+                url=url,
+                scan_id=scan_id,
+                viewport=config.get("viewport", {"width": 1920, "height": 1080})
             )
 
-            try:
-                page_scanner = PageScanner(
-                    browser=browser,
-                    scanners=config.get("scanners", ["axe"]),
-                    screenshot_enabled=config.get("screenshot_enabled", True),
-                    wait_time=config.get("wait_time", 2000),
-                    timeout=config.get("page_timeout", 30000)
+            results.append(page_result)
+
+            # Update progress
+            if progress_callback:
+                await self._update_progress(
+                    progress_callback,
+                    ScanStatus.SCANNING.value,
+                    {
+                        "message": f"Scanned {i+1}/{len(urls)} pages",
+                        "pages_scanned": i+1,
+                        "current_url": url
+                    }
                 )
-
-                for i, url in enumerate(urls):
-                    logger.info(f"Scanning page {i+1}/{len(urls)}: {url}")
-
-                    # Scan page
-                    page_result = await page_scanner.scan_page(
-                        url=url,
-                        scan_id=scan_id,
-                        viewport=config.get("viewport", {"width": 1920, "height": 1080})
-                    )
-
-                    results.append(page_result)
-
-                    # Update progress
-                    if progress_callback:
-                        await self._update_progress(
-                            progress_callback,
-                            ScanStatus.SCANNING.value,
-                            {
-                                "message": f"Scanned {i+1}/{len(urls)} pages",
-                                "pages_scanned": i+1,
-                                "current_url": url
-                            }
-                        )
-
-            finally:
-                await browser.close()
 
         return results
 
@@ -256,13 +246,18 @@ class ScanOrchestrator:
         Update scan progress via callback.
 
         Args:
-            callback: Progress callback function
+            callback: Progress callback function (can be sync or async)
             status: Current status
             data: Progress data
         """
         if callback:
             try:
-                callback(status, data)
+                # Check if callback is async or sync
+                import inspect
+                if inspect.iscoroutinefunction(callback):
+                    await callback(status, data)
+                else:
+                    callback(status, data)
             except Exception as e:
                 logger.warning(f"Progress callback failed: {e}")
 

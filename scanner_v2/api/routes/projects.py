@@ -23,7 +23,7 @@ logger = get_logger("api.routes.projects")
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
 
-@router.get("/", response_model=ProjectListResponse)
+@router.get("/", response_model=ProjectListResponse, response_model_by_alias=False)
 async def list_projects(
     current_user: Annotated[User, Depends(get_current_active_user)],
     project_repo: Annotated[ProjectRepository, Depends(get_project_repository)],
@@ -58,15 +58,17 @@ async def list_projects(
             limit=limit
         )
 
+    from scanner_v2.schemas.project import ProjectSettingsSchema
+
     return ProjectListResponse(
         projects=[
             ProjectResponse(
-                id=p.id,
+                _id=p.id or str(p.__dict__.get('_id', '')),
                 user_id=p.user_id,
                 name=p.name,
                 base_url=p.base_url,
                 description=p.description,
-                settings=p.settings,
+                settings=ProjectSettingsSchema(**p.settings.model_dump()),
                 created_at=p.created_at,
                 updated_at=p.updated_at
             )
@@ -78,7 +80,7 @@ async def list_projects(
     )
 
 
-@router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=ProjectResponse, response_model_by_alias=False, status_code=status.HTTP_201_CREATED)
 async def create_project(
     request: ProjectCreateRequest,
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -95,29 +97,38 @@ async def create_project(
     Returns:
         Created project
     """
+    from scanner_v2.database.models import ProjectSettings
+
+    # Convert settings schema to model
+    settings = None
+    if request.settings:
+        settings = ProjectSettings(**request.settings.model_dump())
+
     project = await project_repo.create(
         user_id=current_user.id,
         name=request.name,
         base_url=request.base_url,
         description=request.description,
-        settings=request.settings
+        settings=settings
     )
 
     logger.info(f"Project created: {project.id} by user {current_user.email}")
 
+    from scanner_v2.schemas.project import ProjectSettingsSchema
+
     return ProjectResponse(
-        id=project.id,
+        _id=project.id or str(project.__dict__.get('_id', '')),
         user_id=project.user_id,
         name=project.name,
         base_url=project.base_url,
         description=project.description,
-        settings=project.settings,
+        settings=ProjectSettingsSchema(**project.settings.model_dump()),
         created_at=project.created_at,
         updated_at=project.updated_at
     )
 
 
-@router.get("/{project_id}", response_model=ProjectResponse)
+@router.get("/{project_id}", response_model=ProjectResponse, response_model_by_alias=False)
 async def get_project(
     project_id: str,
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -152,19 +163,21 @@ async def get_project(
             detail="Access denied to this project"
         )
 
+    from scanner_v2.schemas.project import ProjectSettingsSchema
+
     return ProjectResponse(
-        id=project.id,
+        _id=project.id or str(project.__dict__.get('_id', '')),
         user_id=project.user_id,
         name=project.name,
         base_url=project.base_url,
         description=project.description,
-        settings=project.settings,
+        settings=ProjectSettingsSchema(**project.settings.model_dump()),
         created_at=project.created_at,
         updated_at=project.updated_at
     )
 
 
-@router.put("/{project_id}", response_model=ProjectResponse)
+@router.put("/{project_id}", response_model=ProjectResponse, response_model_by_alias=False)
 async def update_project(
     project_id: str,
     request: ProjectUpdateRequest,
@@ -210,21 +223,25 @@ async def update_project(
     if request.description is not None:
         updates["description"] = request.description
     if request.settings is not None:
-        from scanner_v2.database.models import to_mongo_dict
-        updates["settings"] = to_mongo_dict(request.settings)
+        from scanner_v2.database.models import ProjectSettings, to_mongo_dict
+        # Convert schema to model
+        settings_model = ProjectSettings(**request.settings.model_dump())
+        updates["settings"] = to_mongo_dict(settings_model)
 
     # Update project
     updated_project = await project_repo.update(project_id, updates)
 
     logger.info(f"Project updated: {project_id} by user {current_user.email}")
 
+    from scanner_v2.schemas.project import ProjectSettingsSchema
+
     return ProjectResponse(
-        id=updated_project.id,
+        _id=updated_project.id or str(updated_project.__dict__.get('_id', '')),
         user_id=updated_project.user_id,
         name=updated_project.name,
         base_url=updated_project.base_url,
         description=updated_project.description,
-        settings=updated_project.settings,
+        settings=ProjectSettingsSchema(**updated_project.settings.model_dump()),
         created_at=updated_project.created_at,
         updated_at=updated_project.updated_at
     )

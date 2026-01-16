@@ -132,6 +132,7 @@ class ScanConfig(BaseModel):
     viewport: Dict[str, int] = {"width": 1920, "height": 1080}
     exclude_patterns: List[str] = Field(default_factory=list)
     include_patterns: List[str] = Field(default_factory=list)
+    screenshot_enabled: bool = True
 
 
 class ScanProgress(BaseModel):

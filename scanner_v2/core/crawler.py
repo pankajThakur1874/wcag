@@ -152,8 +152,29 @@ class WebsiteCrawler:
         page: Optional[Page] = None
 
         try:
-            page = await browser.new_page()
-            await page.goto(url, timeout=self.timeout, wait_until="networkidle")
+            # Create page with stealth configuration
+            page = await browser.new_page(
+                user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            )
+
+            # Set extra HTTP headers
+            await page.set_extra_http_headers({
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            })
+
+            # Hide automation indicators
+            await page.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+                Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+                window.chrome = { runtime: {} };
+            """)
+
+            await page.goto(url, timeout=self.timeout, wait_until="domcontentloaded")
 
             # Extract all links
             link_elements = await page.query_selector_all("a[href]")

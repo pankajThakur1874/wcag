@@ -24,6 +24,7 @@ from scanner_v2.database.repositories.issue_repo import IssueRepository
 from scanner_v2.database.models import User
 from scanner_v2.utils.logger import get_logger
 from scanner_v2.utils.exceptions import ProjectNotFoundException, ScanNotFoundException
+from scanner_v2.utils.fix_guides import get_fix_guide, get_rule_category, get_category_icon
 
 logger = get_logger("api.routes.reports")
 
@@ -145,16 +146,19 @@ async def get_json_report(
             {
                 "id": i.id,
                 "rule_id": i.rule_id,
+                "category": get_rule_category(i.rule_id),
                 "description": i.description,
                 "impact": i.impact.value,
                 "wcag_level": i.wcag_level.value,
                 "wcag_criteria": i.wcag_criteria,
                 "principle": i.principle.value,
                 "detected_by": i.detected_by,
+                "help_text": i.help_text,
                 "help_url": i.help_url,
                 "instances_count": len(i.instances) if i.instances else 0,
                 "status": i.status.value,
                 "manual_review_required": i.manual_review_required,
+                "fix_guide": get_fix_guide(i.rule_id),
             }
             for i in issues
         ],
@@ -225,6 +229,17 @@ async def get_html_report(
     # Get issues
     issues, issues_total = await issue_repo.get_by_scan(scan_id, skip=0, limit=10000)
 
+    # Enhance issues with fix guides and categories
+    enhanced_issues = []
+    for issue in issues:
+        issue_dict = {
+            "issue": issue,
+            "category": get_rule_category(issue.rule_id),
+            "category_icon": get_category_icon(get_rule_category(issue.rule_id)),
+            "fix_guide": get_fix_guide(issue.rule_id)
+        }
+        enhanced_issues.append(issue_dict)
+
     # Group issues by impact
     issues_by_impact = {
         "critical": [],
@@ -232,10 +247,19 @@ async def get_html_report(
         "moderate": [],
         "minor": []
     }
-    for issue in issues:
+    for enhanced_issue in enhanced_issues:
+        issue = enhanced_issue["issue"]
         impact = issue.impact.value if hasattr(issue.impact, 'value') else str(issue.impact)
         if impact in issues_by_impact:
-            issues_by_impact[impact].append(issue)
+            issues_by_impact[impact].append(enhanced_issue)
+
+    # Also group by category for easier reference
+    issues_by_category = {}
+    for enhanced_issue in enhanced_issues:
+        category = enhanced_issue["category"]
+        if category not in issues_by_category:
+            issues_by_category[category] = []
+        issues_by_category[category].append(enhanced_issue)
 
     # Group issues by WCAG criteria
     issues_by_wcag = {}
@@ -292,6 +316,7 @@ async def get_html_report(
         "scan": scan,
         "pages": pages,
         "issues_by_impact": issues_by_impact,
+        "issues_by_category": issues_by_category,
         "issues_by_wcag": issues_by_wcag,
         "wcag_checklist": wcag_checklist,
         "generated_at": datetime.utcnow(),
