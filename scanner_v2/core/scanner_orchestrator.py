@@ -153,21 +153,31 @@ class ScanOrchestrator:
         Returns:
             List of discovered URLs
         """
+        scan_type = config.get("scan_type", "full")
         max_depth = config.get("max_depth", 3)
         max_pages = config.get("max_pages", 100)
         exclude_patterns = config.get("exclude_patterns", [])
         include_patterns = config.get("include_patterns", [])
 
-        # Try sitemap first
+        logger.info(f"Crawling website: scan_type={scan_type}, max_depth={max_depth}, max_pages={max_pages}")
+
+        # If single page scan, just return the base URL
+        if scan_type == "single_page":
+            logger.info(f"Single page scan - returning base URL only: {base_url}")
+            return [base_url]
+
+        # Try sitemap first for full scans
+        logger.info("Attempting to fetch sitemap.xml...")
         sitemap_crawler = SitemapCrawler(base_url, max_pages)
         urls = await sitemap_crawler.crawl()
 
         if urls:
-            logger.info(f"Found {len(urls)} URLs from sitemap")
+            logger.info(f"✓ Successfully found {len(urls)} URLs from sitemap")
             return urls[:max_pages]
 
         # Fall back to regular crawling
-        logger.info("Sitemap not found, using web crawler")
+        logger.info("✗ Sitemap not found, falling back to web crawler")
+        logger.info(f"Starting recursive crawl with max_depth={max_depth}, max_pages={max_pages}")
 
         crawler = WebsiteCrawler(
             base_url=base_url,
@@ -178,6 +188,8 @@ class ScanOrchestrator:
         )
 
         urls = await crawler.crawl()
+        logger.info(f"Web crawler discovered {len(urls)} pages")
+
         return urls
 
     async def _scan_pages(
@@ -202,25 +214,49 @@ class ScanOrchestrator:
             List of page scan results
         """
         results = []
+        total_pages = len(urls)
+        scanners_list = config.get("scanners", ["axe"])
+
+        logger.info(f"=" * 60)
+        logger.info(f"Starting to scan {total_pages} pages with scanners: {', '.join(scanners_list)}")
+        logger.info(f"=" * 60)
 
         # Create page scanner (no browser needed, V1 handles it)
         page_scanner = PageScanner(
-            scanners=config.get("scanners", ["axe"]),
+            scanners=scanners_list,
             screenshot_enabled=config.get("screenshot_enabled", True),
             timeout=config.get("page_timeout", 30000)
         )
 
         for i, url in enumerate(urls):
-            logger.info(f"Scanning page {i+1}/{len(urls)}: {url}")
+            page_num = i + 1
+            logger.info(f"")
+            logger.info(f"[{page_num}/{total_pages}] Scanning: {url}")
+            logger.info(f"-" * 60)
 
-            # Scan page (scanner_service creates and manages browser internally)
-            page_result = await page_scanner.scan_page(
-                url=url,
-                scan_id=scan_id,
-                viewport=config.get("viewport", {"width": 1920, "height": 1080})
-            )
+            try:
+                # Scan page (scanner_service creates and manages browser internally)
+                page_result = await page_scanner.scan_page(
+                    url=url,
+                    scan_id=scan_id,
+                    viewport=config.get("viewport", {"width": 1920, "height": 1080})
+                )
 
-            results.append(page_result)
+                results.append(page_result)
+
+                # Log results
+                issues_count = len(page_result.get("issues", []))
+                logger.info(f"✓ Page {page_num} complete: {issues_count} issues found")
+
+            except Exception as e:
+                logger.error(f"✗ Page {page_num} failed: {e}")
+                # Still add a result with error
+                results.append({
+                    "url": url,
+                    "page_id": f"page_{i}",
+                    "error": str(e),
+                    "issues": []
+                })
 
             # Update progress
             if progress_callback:
@@ -228,11 +264,17 @@ class ScanOrchestrator:
                     progress_callback,
                     ScanStatus.SCANNING.value,
                     {
-                        "message": f"Scanned {i+1}/{len(urls)} pages",
-                        "pages_scanned": i+1,
+                        "message": f"Scanned {page_num}/{total_pages} pages",
+                        "pages_scanned": page_num,
+                        "pages_total": total_pages,
                         "current_url": url
                     }
                 )
+
+        logger.info(f"")
+        logger.info(f"=" * 60)
+        logger.info(f"✓ Completed scanning all {total_pages} pages")
+        logger.info(f"=" * 60)
 
         return results
 

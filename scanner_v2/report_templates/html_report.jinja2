@@ -115,6 +115,37 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Pages Scanned List -->
+            {% if pages and pages|length > 0 %}
+            <div class="pages-scanned-summary">
+                <h3>📄 Pages Scanned ({{ pages|length }})</h3>
+                <div class="scanned-pages-list">
+                    {% for page in pages %}
+                    <div class="scanned-page-item">
+                        <div class="page-number">{{ loop.index }}</div>
+                        <div class="page-info">
+                            <a href="{{ page.url }}" target="_blank" class="page-url" title="{{ page.url }}">
+                                {{ page.url }}
+                            </a>
+                            <div class="page-meta">
+                                <span class="page-title">{{ page.title or 'No title' }}</span>
+                                <span class="page-issues">{{ page.issues_count }} issue(s)</span>
+                                <span class="page-score score-{{ 'excellent' if page.compliance_score >= 90 else 'good' if page.compliance_score >= 70 else 'fair' if page.compliance_score >= 50 else 'poor' }}">
+                                    {{ page.compliance_score|round(0)|int }}% score
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="pages-scanned-summary">
+                <h3>📄 Pages Scanned</h3>
+                <p style="color: #6b7280; font-style: italic; padding: 1rem;">No page data available. This might occur if pages haven't been saved to the database yet.</p>
+            </div>
+            {% endif %}
         </section>
 
         <!-- Issues by Impact -->

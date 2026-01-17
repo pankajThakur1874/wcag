@@ -159,9 +159,14 @@ class ScanWorker:
         Returns:
             Scan results
         """
-        from scanner_v2.database.models import ScanProgress
+        from scanner_v2.database.models import (
+            ScanProgress, ScannedPage, Issue, WCAGLevel,
+            Principle, ImpactLevel, IssueStatus, IssueInstance
+        )
         from scanner_v2.api.dependencies import get_db_instance
         from scanner_v2.database.repositories.scan_repo import ScanRepository
+        from scanner_v2.database.repositories.page_repo import PageRepository
+        from scanner_v2.database.repositories.issue_repo import IssueRepository
 
         payload = ScanJobPayload(**job.payload)
 
@@ -171,6 +176,8 @@ class ScanWorker:
         mongodb_instance = get_db_instance()
         db = mongodb_instance.db  # Get the actual AsyncIOMotorDatabase
         scan_repo = ScanRepository(db)
+        page_repo = PageRepository(db)
+        issue_repo = IssueRepository(db)
 
         # Progress callback to track status AND update database
         async def progress_callback(status: str, data: Dict):
@@ -202,6 +209,113 @@ class ScanWorker:
         )
 
         logger.info(f"Scan orchestration complete: {payload.scan_id}")
+
+        # Save pages to database
+        try:
+            logger.info(f"Saving {len(results.get('pages', []))} pages to database...")
+
+            pages_to_save = []
+            temp_id_to_page_data = {}  # Map temp page_id to page data for later lookup
+
+            for page_data in results.get("pages", []):
+                # Convert page dict to ScannedPage model
+                scanned_page = ScannedPage(
+                    scan_id=payload.scan_id,
+                    url=page_data.get("url", ""),
+                    title=page_data.get("title"),
+                    status_code=page_data.get("status_code"),
+                    load_time_ms=page_data.get("load_time_ms"),
+                    screenshot_path=page_data.get("screenshot_path"),
+                    issues_count=len(page_data.get("issues", [])),
+                    compliance_score=page_data.get("compliance_score", 0.0)
+                )
+                pages_to_save.append(scanned_page)
+
+                # Store mapping from temp page_id to page data
+                temp_page_id = page_data.get("page_id", "")
+                temp_id_to_page_data[temp_page_id] = {
+                    "url": page_data.get("url", ""),
+                    "page_obj": scanned_page
+                }
+
+            # Save pages in bulk
+            if pages_to_save:
+                page_ids = await page_repo.create_many(pages_to_save)
+                logger.info(f"✓ Saved {len(page_ids)} pages to database")
+
+                # Update mapping with actual database IDs
+                for i, page_obj in enumerate(pages_to_save):
+                    page_obj.id = page_ids[i]
+
+                # Create URL to page_id mapping for issues
+                url_to_page_id = {}
+                for temp_page_id, data in temp_id_to_page_data.items():
+                    url = data["url"]
+                    page_obj = data["page_obj"]
+                    url_to_page_id[url] = page_obj.id
+
+        except Exception as e:
+            logger.error(f"Failed to save pages to database: {e}")
+            url_to_page_id = {}
+
+        # Save issues to database
+        try:
+            logger.info(f"Saving {len(results.get('all_issues', []))} issues to database...")
+
+            issues_to_save = []
+
+            for issue_data in results.get("all_issues", []):
+                # Get actual page_id from URL
+                page_url = issue_data.get("page_url", "")
+                page_id = url_to_page_id.get(page_url, "")
+
+                if not page_id:
+                    logger.warning(f"Could not find page_id for URL: {page_url}, skipping issue")
+                    continue
+
+                # Convert instances
+                instances = []
+                for inst_data in issue_data.get("instances", []):
+                    instance = IssueInstance(
+                        selector=inst_data.get("selector", ""),
+                        html=inst_data.get("html"),
+                        screenshot_path=inst_data.get("screenshot_path"),
+                        context=inst_data.get("context"),
+                        failure_summary=inst_data.get("failure_summary"),
+                        data=inst_data.get("data")
+                    )
+                    instances.append(instance)
+
+                # Convert issue dict to Issue model
+                try:
+                    issue = Issue(
+                        scan_id=payload.scan_id,
+                        page_id=page_id,
+                        wcag_criteria=issue_data.get("wcag_criteria", []),
+                        wcag_level=WCAGLevel(issue_data.get("wcag_level", "AA")),
+                        principle=Principle(issue_data.get("principle", "perceivable")),
+                        impact=ImpactLevel(issue_data.get("impact", "moderate")),
+                        rule_id=issue_data.get("rule_id", ""),
+                        description=issue_data.get("description", ""),
+                        help_text=issue_data.get("help_text"),
+                        help_url=issue_data.get("help_url"),
+                        detected_by=issue_data.get("detected_by", []),
+                        instances=instances,
+                        status=IssueStatus.OPEN,
+                        manual_review_required=issue_data.get("manual_review_required", False),
+                        fix_suggestion=issue_data.get("fix_suggestion")
+                    )
+                    issues_to_save.append(issue)
+                except Exception as e:
+                    logger.warning(f"Failed to convert issue: {e}")
+                    continue
+
+            # Save issues in bulk
+            if issues_to_save:
+                issue_ids = await issue_repo.create_many(issues_to_save)
+                logger.info(f"✓ Saved {len(issue_ids)} issues to database")
+        except Exception as e:
+            logger.error(f"Failed to save issues to database: {e}")
 
         return results
 

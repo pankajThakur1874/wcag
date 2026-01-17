@@ -96,12 +96,14 @@ class WebsiteCrawler:
             url: URL to crawl
             depth: Current depth
         """
-        # Check limits
+        # Check depth limit
         if depth > self.max_depth:
+            logger.debug(f"Depth limit reached at {depth} for {url}")
             return
 
+        # Check pages limit
         if len(self.discovered_urls) >= self.max_pages:
-            logger.warning(f"Reached max pages limit: {self.max_pages}")
+            logger.debug(f"Max pages limit reached: {self.max_pages}")
             return
 
         # Normalize URL
@@ -109,6 +111,7 @@ class WebsiteCrawler:
 
         # Skip if already visited
         if url in self.visited_urls:
+            logger.debug(f"Already visited: {url}")
             return
 
         # Skip if not allowed
@@ -120,23 +123,35 @@ class WebsiteCrawler:
         self.visited_urls.add(url)
         self.discovered_urls.add(url)
 
-        logger.debug(f"Crawling: {url} (depth={depth})")
+        logger.info(f"Discovered page {len(self.discovered_urls)}/{self.max_pages}: {url} (depth={depth})")
 
         # Extract links
         links = await self._extract_links(browser, url)
+        logger.info(f"Found {len(links)} links on {url}")
 
-        # Crawl discovered links
-        tasks = []
-        for link in links:
+        # Crawl discovered links (limit concurrency to avoid overwhelming the site)
+        # Process links in batches to control concurrency
+        batch_size = 5  # Process 5 links concurrently
+
+        for i in range(0, len(links), batch_size):
+            # Check if we've reached max pages
             if len(self.discovered_urls) >= self.max_pages:
+                logger.info(f"Reached max pages limit ({self.max_pages}), stopping crawl")
                 break
 
-            if link not in self.visited_urls:
-                tasks.append(self._crawl_recursive(browser, link, depth + 1))
+            batch = links[i:i + batch_size]
+            tasks = []
 
-        # Crawl links concurrently (but limit concurrency)
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
+            for link in batch:
+                if len(self.discovered_urls) >= self.max_pages:
+                    break
+
+                if link not in self.visited_urls:
+                    tasks.append(self._crawl_recursive(browser, link, depth + 1))
+
+            if tasks:
+                # Process batch concurrently
+                await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _extract_links(self, browser: Browser, url: str) -> List[str]:
         """
