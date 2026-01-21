@@ -78,7 +78,7 @@ def start(host: str, port: int, reload: bool):
     project_root = Path(__file__).parent.parent.parent.parent
     cmd = [
         "python",
-        str(project_root / "main_v2.py"),
+        str(project_root / "wcagScanner.py"),
     ]
 
     # Set environment variables for server config
@@ -203,7 +203,7 @@ def status():
 def logs(follow: bool):
     """View server logs (not implemented)."""
     print_warning("Log viewing not implemented yet")
-    print_info("Run server in foreground to see logs: python main_v2.py")
+    print_info("Run server in foreground to see logs: python wcagScanner.py")
 
 
 @server.command()
