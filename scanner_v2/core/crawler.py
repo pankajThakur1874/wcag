@@ -27,6 +27,10 @@ class WebsiteCrawler:
         include_patterns: Optional[List[str]] = None,
         respect_robots_txt: bool = True,
         timeout: int = 30000,
+        enable_interactive_crawl: bool = True,
+        max_clicks_per_page: int = 10,
+        click_timeout: int = 3000,
+        js_wait_time: float = 0.5,
     ):
         """
         Initialize crawler.
@@ -39,6 +43,10 @@ class WebsiteCrawler:
             include_patterns: URL patterns to include
             respect_robots_txt: Whether to respect robots.txt
             timeout: Page load timeout in milliseconds
+            enable_interactive_crawl: Enable clicking buttons and interactive elements
+            max_clicks_per_page: Maximum interactive elements to click per page
+            click_timeout: Timeout for waiting after clicks (ms)
+            js_wait_time: Time to wait for JavaScript rendering (seconds)
         """
         if not is_valid_url(base_url):
             raise InvalidURLError(f"Invalid base URL: {base_url}")
@@ -50,11 +58,16 @@ class WebsiteCrawler:
         self.include_patterns = include_patterns or []
         self.respect_robots_txt = respect_robots_txt
         self.timeout = timeout
+        self.enable_interactive_crawl = enable_interactive_crawl
+        self.max_clicks_per_page = max_clicks_per_page
+        self.click_timeout = click_timeout
+        self.js_wait_time = js_wait_time
 
         self.discovered_urls: Set[str] = set()
         self.visited_urls: Set[str] = set()
         self.robot_parser: Optional[RobotFileParser] = None
         self.domain = urlparse(self.base_url).netloc
+        self.discovered_routes: Set[str] = set()  # Track SPA routes
 
     async def crawl(self) -> List[str]:
         """
@@ -73,7 +86,16 @@ class WebsiteCrawler:
             await self._load_robots_txt()
 
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            # Try Firefox first (better compatibility with some sites)
+            try:
+                browser = await p.firefox.launch(headless=True)
+                browser_type = "Firefox"
+            except Exception as e:
+                logger.warning(f"Firefox launch failed, falling back to Chromium: {e}")
+                browser = await p.chromium.launch(headless=True)
+                browser_type = "Chromium"
+
+            logger.info(f"Using {browser_type} browser for crawling")
 
             try:
                 # Start crawling from base URL
@@ -125,9 +147,16 @@ class WebsiteCrawler:
 
         logger.info(f"Discovered page {len(self.discovered_urls)}/{self.max_pages}: {url} (depth={depth})")
 
-        # Extract links
+        # Extract links (traditional <a> tags)
         links = await self._extract_links(browser, url)
-        logger.info(f"Found {len(links)} links on {url}")
+        logger.info(f"Found {len(links)} traditional links on {url}")
+
+        # Try interactive crawling if enabled
+        if self.enable_interactive_crawl and len(self.discovered_urls) < self.max_pages:
+            interactive_urls = await self._discover_interactive_pages(browser, url)
+            if interactive_urls:
+                logger.info(f"Found {len(interactive_urls)} additional pages via interactive elements on {url}")
+                links.extend(interactive_urls)
 
         # Crawl discovered links (limit concurrency to avoid overwhelming the site)
         # Process links in batches to control concurrency
@@ -191,6 +220,10 @@ class WebsiteCrawler:
 
             await page.goto(url, timeout=self.timeout, wait_until="domcontentloaded")
 
+            # Wait for JavaScript to render content (important for SPAs)
+            if self.js_wait_time > 0:
+                await asyncio.sleep(self.js_wait_time)
+
             # Extract all links
             link_elements = await page.query_selector_all("a[href]")
             links = []
@@ -213,6 +246,169 @@ class WebsiteCrawler:
 
         except Exception as e:
             logger.warning(f"Failed to extract links from {url}: {e}")
+            return []
+
+        finally:
+            if page:
+                await page.close()
+
+    async def _discover_interactive_pages(self, browser: Browser, url: str) -> List[str]:
+        """
+        Discover pages by clicking interactive elements (buttons, divs with click handlers).
+
+        Args:
+            browser: Playwright browser instance
+            url: Current page URL
+
+        Returns:
+            List of newly discovered URLs
+        """
+        page: Optional[Page] = None
+        discovered = []
+
+        try:
+            page = await browser.new_page(
+                user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            )
+
+            await page.set_extra_http_headers({
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+            })
+
+            # Hide automation indicators
+            await page.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                window.chrome = { runtime: {} };
+            """)
+
+            await page.goto(url, timeout=self.timeout, wait_until="domcontentloaded")
+
+            # Wait for JavaScript to render content (important for SPAs)
+            if self.js_wait_time > 0:
+                await asyncio.sleep(self.js_wait_time)
+
+            # Find clickable elements
+            clickable_selectors = [
+                'button:not([type="submit"]):not([disabled])',
+                '[role="button"]:not([disabled])',
+                'a[href="#"]:not([data-toggle])',
+                'div[onclick]',
+                'span[onclick]',
+                '[data-navigation]',
+                '[data-route]',
+                '.nav-link:not([href^="http"])',
+                '.menu-item:not([href^="http"])',
+            ]
+
+            for selector in clickable_selectors:
+                try:
+                    elements = await page.query_selector_all(selector)
+
+                    # Limit number of elements to click
+                    elements = elements[:self.max_clicks_per_page]
+
+                    for element in elements:
+                        # Check if we've reached max pages
+                        if len(self.discovered_urls) + len(discovered) >= self.max_pages:
+                            break
+
+                        try:
+                            # Get current URL before click
+                            current_url = page.url
+
+                            # Check if element is visible and enabled
+                            is_visible = await element.is_visible()
+                            is_enabled = await element.is_enabled()
+
+                            if not is_visible or not is_enabled:
+                                continue
+
+                            # Setup route change listener for SPAs
+                            route_changed = False
+                            new_route = None
+
+                            async def handle_route_change(route):
+                                nonlocal route_changed, new_route
+                                if route != current_url:
+                                    route_changed = True
+                                    new_route = route
+
+                            # Listen for URL changes (including pushState/replaceState)
+                            await page.evaluate("""
+                                window.__originalPushState = window.history.pushState;
+                                window.__originalReplaceState = window.history.replaceState;
+                                window.__routeChanged = false;
+                                window.__newRoute = null;
+
+                                window.history.pushState = function(...args) {
+                                    window.__routeChanged = true;
+                                    window.__newRoute = window.location.href;
+                                    return window.__originalPushState.apply(this, args);
+                                };
+
+                                window.history.replaceState = function(...args) {
+                                    window.__routeChanged = true;
+                                    window.__newRoute = window.location.href;
+                                    return window.__originalReplaceState.apply(this, args);
+                                };
+                            """)
+
+                            # Click the element
+                            await element.click(timeout=self.click_timeout)
+
+                            # Wait briefly for any navigation or route changes
+                            await asyncio.sleep(0.2)
+
+                            # Check if URL changed
+                            after_click_url = page.url
+
+                            # Check if route changed via history API
+                            route_info = await page.evaluate("""
+                                ({
+                                    changed: window.__routeChanged,
+                                    newRoute: window.__newRoute
+                                })
+                            """)
+
+                            new_url = None
+
+                            if after_click_url != current_url:
+                                new_url = after_click_url
+                                logger.debug(f"Click caused navigation to: {new_url}")
+                            elif route_info['changed'] and route_info['newRoute']:
+                                new_url = route_info['newRoute']
+                                logger.debug(f"Click caused SPA route change to: {new_url}")
+
+                            if new_url:
+                                new_url = normalize_url(new_url)
+
+                                # Check if this is a new URL from same domain
+                                if (is_same_domain(new_url, self.base_url) and
+                                    new_url not in self.discovered_urls and
+                                    new_url not in discovered and
+                                    self._is_allowed(new_url)):
+
+                                    discovered.append(new_url)
+                                    logger.info(f"Interactive discovery: {new_url}")
+
+                                # Navigate back if URL changed
+                                if after_click_url != current_url:
+                                    await page.goto(url, timeout=self.timeout, wait_until="domcontentloaded")
+
+                        except Exception as e:
+                            logger.debug(f"Failed to click element: {e}")
+                            continue
+
+                except Exception as e:
+                    logger.debug(f"Failed to process selector {selector}: {e}")
+                    continue
+
+            logger.debug(f"Interactive crawl found {len(discovered)} new URLs")
+            return discovered
+
+        except Exception as e:
+            logger.warning(f"Interactive page discovery failed for {url}: {e}")
             return []
 
         finally:

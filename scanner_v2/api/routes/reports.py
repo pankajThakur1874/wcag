@@ -139,6 +139,7 @@ async def get_json_report(
                 "load_time_ms": p.load_time_ms,
                 "issues_count": p.issues_count,
                 "compliance_score": p.compliance_score,
+                "error_message": p.error_message,  # Include error information for failed pages
             }
             for p in pages
         ],

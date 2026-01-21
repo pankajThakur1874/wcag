@@ -189,12 +189,21 @@ class ScanWorker:
                 if status in [s.value for s in ScanStatus]:
                     await scan_repo.update_status(payload.scan_id, ScanStatus(status))
 
+                # Parse started_at if provided
+                started_at = None
+                if data.get('started_at'):
+                    from datetime import datetime
+                    started_at = datetime.fromisoformat(data['started_at'])
+
                 # Update progress details
                 progress = ScanProgress(
-                    total_pages=data.get('pages_discovered', data.get('total_pages', 0)),
+                    total_pages=data.get('pages_discovered', data.get('pages_total', 0)),
                     pages_crawled=data.get('pages_discovered', 0),
                     pages_scanned=data.get('pages_scanned', 0),
-                    current_page=data.get('current_url')
+                    current_page=data.get('current_url'),
+                    percentage_complete=data.get('percentage_complete', 0.0),
+                    estimated_time_remaining_seconds=data.get('estimated_time_remaining_seconds'),
+                    started_at=started_at
                 )
                 await scan_repo.update_progress(payload.scan_id, progress)
             except Exception as e:
@@ -227,7 +236,8 @@ class ScanWorker:
                     load_time_ms=page_data.get("load_time_ms"),
                     screenshot_path=page_data.get("screenshot_path"),
                     issues_count=len(page_data.get("issues", [])),
-                    compliance_score=page_data.get("compliance_score", 0.0)
+                    compliance_score=page_data.get("compliance_score", 0.0),
+                    error_message=page_data.get("error")  # Capture error if page scan failed
                 )
                 pages_to_save.append(scanned_page)
 

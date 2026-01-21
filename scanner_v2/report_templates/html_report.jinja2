@@ -370,19 +370,36 @@
                         <tr>
                             <td class="url-cell">
                                 <a href="{{ page.url }}" target="_blank">{{ page.url|truncate(60) }}</a>
+                                {% if page.error_message %}
+                                <div style="color: #dc2626; font-size: 0.875rem; margin-top: 4px;">
+                                    ⚠️ Error: {{ page.error_message|truncate(100) }}
+                                </div>
+                                {% endif %}
                             </td>
-                            <td>{{ page.title|truncate(40) }}</td>
+                            <td>{{ page.title|truncate(40) if page.title else 'N/A' }}</td>
                             <td class="issues-cell">
+                                {% if page.error_message %}
+                                <span style="color: #dc2626;">Failed</span>
+                                {% else %}
                                 <span class="issue-badge">{{ page.issues_count }}</span>
+                                {% endif %}
                             </td>
                             <td class="score-cell">
+                                {% if page.error_message %}
+                                <span style="color: #dc2626;">-</span>
+                                {% else %}
                                 <span class="score-badge score-{{ 'excellent' if page.compliance_score >= 90 else 'good' if page.compliance_score >= 70 else 'fair' if page.compliance_score >= 50 else 'poor' }}">
                                     {{ page.compliance_score|round(0)|int }}%
                                 </span>
+                                {% endif %}
                             </td>
-                            <td>{{ page.load_time_ms }}ms</td>
+                            <td>{{ (page.load_time_ms|string + 'ms') if page.load_time_ms else 'N/A' }}</td>
                             <td>
-                                <span class="status-badge status-{{ page.status_code }}">{{ page.status_code }}</span>
+                                {% if page.error_message %}
+                                <span class="status-badge" style="background: #fee2e2; color: #dc2626;">Error</span>
+                                {% else %}
+                                <span class="status-badge status-{{ page.status_code }}">{{ page.status_code if page.status_code else 'N/A' }}</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}

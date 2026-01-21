@@ -1041,6 +1041,29 @@
                     <label class="form-label">Max Depth</label>
                     <input type="number" class="form-input" id="scanMaxDepth" value="3" min="1" max="5">
                 </div>
+                <div class="form-group" style="border: 2px solid var(--success); border-radius: 8px; padding: 12px; background: #f0fdf4;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px;">
+                        <input type="checkbox" id="enableInteractiveCrawl" checked style="width: 18px; height: 18px;">
+                        <strong style="color: var(--success);">✨ Enhanced Crawling (NEW)</strong>
+                    </label>
+                    <div style="font-size: 13px; color: var(--gray-700); margin-bottom: 8px;">
+                        Discovers pages hidden behind buttons, JavaScript navigation, and SPA routes.
+                        <strong>Finds 2-5x more pages!</strong>
+                    </div>
+                    <div id="interactiveCrawlOptions" style="margin-top: 8px; padding-left: 26px;">
+                        <label style="font-size: 13px; display: block; margin-bottom: 8px;">
+                            Max clicks per page:
+                            <input type="number" class="form-input" id="maxClicksPerPage" value="5" min="1" max="20" style="width: 70px; display: inline-block; margin-left: 8px; padding: 4px 8px;">
+                        </label>
+                        <label style="font-size: 13px; display: block; margin-bottom: 4px;">
+                            JS wait time (seconds):
+                            <input type="number" class="form-input" id="jsWaitTime" value="0.5" min="0" max="5" step="0.1" style="width: 70px; display: inline-block; margin-left: 8px; padding: 4px 8px;">
+                        </label>
+                        <div style="font-size: 12px; color: var(--gray-600); margin-top: 4px;">
+                            ⚡ Lower values = faster crawling. Increase if pages don't load fully.
+                        </div>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label class="form-label">Scanners (Select at least one)</label>
                     <div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--gray-300); border-radius: 8px; padding: 12px; background: white;">
@@ -1645,7 +1668,9 @@
                             <div class="progress-bar-container">
                                 <div class="progress-bar" style="width: ${calculateProgress(scan)}%"></div>
                             </div>
-                            <div class="scan-meta">${progress.current_page || 'Initializing...'}</div>
+                            <div class="scan-meta">
+                                ${formatScanProgress(scan)}
+                            </div>
                         ` : ''}
                         ${scan.status === 'completed' && summary.total_issues !== undefined ? `
                             <div class="scan-stats-grid">
@@ -1677,10 +1702,45 @@
 
         function calculateProgress(scan) {
             const progress = scan.progress || {};
+            // Use backend-calculated percentage if available
+            if (progress.percentage_complete !== undefined) {
+                return Math.round(progress.percentage_complete);
+            }
+            // Fallback to manual calculation
             if (progress.total_pages && progress.pages_scanned) {
                 return Math.round((progress.pages_scanned / progress.total_pages) * 100);
             }
             return 10;
+        }
+
+        function formatScanProgress(scan) {
+            const progress = scan.progress || {};
+
+            // Show percentage if available
+            const percentage = progress.percentage_complete !== undefined
+                ? Math.round(progress.percentage_complete)
+                : (progress.total_pages && progress.pages_scanned
+                    ? Math.round((progress.pages_scanned / progress.total_pages) * 100)
+                    : 0);
+
+            // Format time remaining
+            let timeRemaining = '';
+            if (progress.estimated_time_remaining_seconds !== null && progress.estimated_time_remaining_seconds !== undefined) {
+                const seconds = progress.estimated_time_remaining_seconds;
+                if (seconds > 60) {
+                    const minutes = Math.floor(seconds / 60);
+                    timeRemaining = ` • ~${minutes}m ${seconds % 60}s remaining`;
+                } else {
+                    timeRemaining = ` • ~${seconds}s remaining`;
+                }
+            }
+
+            // Build progress message
+            const pagesInfo = progress.total_pages
+                ? `${progress.pages_scanned || 0}/${progress.total_pages} pages`
+                : 'Initializing...';
+
+            return `${percentage}% complete • ${pagesInfo}${timeRemaining}`;
         }
 
         function startPollingActiveScans() {
@@ -1764,6 +1824,28 @@
             });
         }
 
+        // Toggle interactive crawl options
+        document.addEventListener('DOMContentLoaded', function() {
+            const enableInteractiveCrawl = document.getElementById('enableInteractiveCrawl');
+            const interactiveCrawlOptions = document.getElementById('interactiveCrawlOptions');
+            const maxClicksInput = document.getElementById('maxClicksPerPage');
+            const jsWaitTimeInput = document.getElementById('jsWaitTime');
+
+            if (enableInteractiveCrawl) {
+                enableInteractiveCrawl.addEventListener('change', function() {
+                    if (this.checked) {
+                        interactiveCrawlOptions.style.opacity = '1';
+                        maxClicksInput.disabled = false;
+                        jsWaitTimeInput.disabled = false;
+                    } else {
+                        interactiveCrawlOptions.style.opacity = '0.5';
+                        maxClicksInput.disabled = true;
+                        jsWaitTimeInput.disabled = true;
+                    }
+                });
+            }
+        });
+
         async function handleScanSubmit(event) {
             event.preventDefault();
 
@@ -1787,12 +1869,18 @@
             const scanType = document.getElementById('scanType').value;
             const maxPages = parseInt(document.getElementById('scanMaxPages').value);
             const maxDepth = parseInt(document.getElementById('scanMaxDepth').value);
+            const enableInteractiveCrawl = document.getElementById('enableInteractiveCrawl').checked;
+            const maxClicksPerPage = parseInt(document.getElementById('maxClicksPerPage').value);
+            const jsWaitTime = parseFloat(document.getElementById('jsWaitTime').value);
 
             const config = {
                 scan_type: scanType,
                 max_pages: maxPages,
                 max_depth: maxDepth,
-                scanners: selectedScanners
+                scanners: selectedScanners,
+                enable_interactive_crawl: enableInteractiveCrawl,
+                max_clicks_per_page: maxClicksPerPage,
+                js_wait_time: jsWaitTime
             };
 
             const btn = document.getElementById('scanSubmitBtn');

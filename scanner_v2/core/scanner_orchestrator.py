@@ -177,6 +177,17 @@ class ScanOrchestrator:
 
         # Fall back to regular crawling
         logger.info("✗ Sitemap not found, falling back to web crawler")
+
+        # Enhanced crawling options
+        enable_interactive_crawl = config.get("enable_interactive_crawl", True)
+        max_clicks_per_page = config.get("max_clicks_per_page", 5)  # Reduced from 10 to 5 for speed
+        js_wait_time = config.get("js_wait_time", 0.5)  # Reduced from 2s to 0.5s
+
+        if enable_interactive_crawl:
+            logger.info(f"Interactive crawling ENABLED - will click buttons and track route changes (max {max_clicks_per_page} clicks/page, {js_wait_time}s JS wait)")
+        else:
+            logger.info("Interactive crawling DISABLED - will only follow <a> links")
+
         logger.info(f"Starting recursive crawl with max_depth={max_depth}, max_pages={max_pages}")
 
         crawler = WebsiteCrawler(
@@ -185,6 +196,9 @@ class ScanOrchestrator:
             max_pages=max_pages,
             exclude_patterns=exclude_patterns,
             include_patterns=include_patterns,
+            enable_interactive_crawl=enable_interactive_crawl,
+            max_clicks_per_page=max_clicks_per_page,
+            js_wait_time=js_wait_time,
         )
 
         urls = await crawler.crawl()
@@ -221,6 +235,10 @@ class ScanOrchestrator:
         logger.info(f"Starting to scan {total_pages} pages with scanners: {', '.join(scanners_list)}")
         logger.info(f"=" * 60)
 
+        # Track scanning start time for estimates
+        scanning_start_time = utc_now()
+        page_scan_times = []  # Track time per page for better estimates
+
         # Create page scanner (no browser needed, V1 handles it)
         page_scanner = PageScanner(
             scanners=scanners_list,
@@ -233,6 +251,8 @@ class ScanOrchestrator:
             logger.info(f"")
             logger.info(f"[{page_num}/{total_pages}] Scanning: {url}")
             logger.info(f"-" * 60)
+
+            page_start_time = utc_now()
 
             try:
                 # Scan page (scanner_service creates and manages browser internally)
@@ -258,6 +278,18 @@ class ScanOrchestrator:
                     "issues": []
                 })
 
+            # Track scan time for this page
+            page_duration = calculate_duration_ms(page_start_time) / 1000  # Convert to seconds
+            page_scan_times.append(page_duration)
+
+            # Calculate progress metrics
+            percentage_complete = (page_num / total_pages) * 100
+
+            # Estimate remaining time based on average time per page
+            avg_time_per_page = sum(page_scan_times) / len(page_scan_times)
+            pages_remaining = total_pages - page_num
+            estimated_seconds_remaining = int(avg_time_per_page * pages_remaining)
+
             # Update progress
             if progress_callback:
                 await self._update_progress(
@@ -267,7 +299,10 @@ class ScanOrchestrator:
                         "message": f"Scanned {page_num}/{total_pages} pages",
                         "pages_scanned": page_num,
                         "pages_total": total_pages,
-                        "current_url": url
+                        "current_url": url,
+                        "percentage_complete": round(percentage_complete, 1),
+                        "estimated_time_remaining_seconds": estimated_seconds_remaining,
+                        "started_at": scanning_start_time.isoformat()
                     }
                 )
 

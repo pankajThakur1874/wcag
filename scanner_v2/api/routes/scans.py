@@ -80,7 +80,10 @@ async def create_scan(
         viewport=request.viewport or project.settings.viewport,
         wait_time=request.wait_time or project.settings.wait_time,
         wcag_level=request.wcag_level or project.settings.wcag_level,
-        screenshot_enabled=request.screenshot_enabled if request.screenshot_enabled is not None else True
+        screenshot_enabled=request.screenshot_enabled if request.screenshot_enabled is not None else True,
+        enable_interactive_crawl=request.enable_interactive_crawl if request.enable_interactive_crawl is not None else True,
+        max_clicks_per_page=request.max_clicks_per_page if request.max_clicks_per_page is not None else 5,
+        js_wait_time=request.js_wait_time if request.js_wait_time is not None else 0.5
     )
 
     # Create scan
@@ -188,6 +191,7 @@ async def create_scan(
             "project_id": project_id,
             "base_url": project.base_url,
             "config": {
+                "scan_type": scan.scan_type.value,  # Pass scan_type to orchestrator
                 "scanners": config.scanners,
                 "max_depth": config.max_depth,
                 "max_pages": config.max_pages,
@@ -196,7 +200,10 @@ async def create_scan(
                 "viewport": config.viewport,
                 "wait_time": config.wait_time,
                 "wcag_level": config.wcag_level.value,
-                "screenshot_enabled": config.screenshot_enabled
+                "screenshot_enabled": config.screenshot_enabled,
+                "enable_interactive_crawl": config.enable_interactive_crawl,
+                "max_clicks_per_page": config.max_clicks_per_page,
+                "js_wait_time": config.js_wait_time
             }
         },
         priority=JobPriority.NORMAL.value,
@@ -422,7 +429,9 @@ async def get_scan_status(
             "total_pages": scan.progress.total_pages if scan.progress else 0,
             "pages_crawled": scan.progress.pages_crawled if scan.progress else 0,
             "pages_scanned": scan.progress.pages_scanned if scan.progress else 0,
-            "current_page": scan.progress.current_page if scan.progress else None
+            "current_page": scan.progress.current_page if scan.progress else None,
+            "percentage_complete": scan.progress.percentage_complete if scan.progress else 0.0,
+            "estimated_time_remaining_seconds": scan.progress.estimated_time_remaining_seconds if scan.progress else None
         },
         "started_at": scan.started_at.isoformat() if scan.started_at else None,
         "completed_at": scan.completed_at.isoformat() if scan.completed_at else None,

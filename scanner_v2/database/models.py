@@ -133,6 +133,9 @@ class ScanConfig(BaseModel):
     exclude_patterns: List[str] = Field(default_factory=list)
     include_patterns: List[str] = Field(default_factory=list)
     screenshot_enabled: bool = True
+    enable_interactive_crawl: bool = True  # Enable clicking buttons and interactive elements
+    max_clicks_per_page: int = 5  # Maximum interactive elements to click per page (reduced for performance)
+    js_wait_time: float = 0.5  # Time to wait for JavaScript rendering in seconds
 
 
 class ScanProgress(BaseModel):
@@ -142,6 +145,9 @@ class ScanProgress(BaseModel):
     pages_crawled: int = 0
     pages_scanned: int = 0
     current_page: Optional[str] = None
+    percentage_complete: float = 0.0  # 0-100
+    estimated_time_remaining_seconds: Optional[int] = None  # Estimated seconds remaining
+    started_at: Optional[datetime] = None  # When scanning started (for time estimation)
 
 
 class ImpactSummary(BaseModel):
@@ -221,6 +227,7 @@ class ScannedPage(MongoBaseModel):
     raw_results: RawScanResults = Field(default_factory=RawScanResults)
     issues_count: int = 0
     compliance_score: float = 0.0
+    error_message: Optional[str] = None  # Error message if page scan failed
     scanned_at: datetime = Field(default_factory=datetime.utcnow)
 
 

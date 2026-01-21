@@ -148,6 +148,9 @@ class ScanCreateRequest(BaseModel):
     wait_time: Optional[int] = None
     wcag_level: Optional[WCAGLevel] = None
     screenshot_enabled: Optional[bool] = None
+    enable_interactive_crawl: Optional[bool] = None
+    max_clicks_per_page: Optional[int] = None
+    js_wait_time: Optional[float] = None
 
 
 class ScanResponse(BaseModel):
