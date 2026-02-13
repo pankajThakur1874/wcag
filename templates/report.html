@@ -1,20 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WCAG Accessibility Report - {{ report.scan_result.url }}</title>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --color-critical: #dc3545;
-            --color-serious: #fd7e14;
-            --color-moderate: #ffc107;
-            --color-minor: #28a745;
-            --color-pass: #28a745;
-            --bg-primary: #1a1a2e;
-            --bg-secondary: #16213e;
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0a0;
+            /* Light Theme Palette - Matching Dashboard V2 */
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border-light: #e2e8f0;
+
+            /* Branding */
+            --primary-start: #6366f1;
+            --primary-end: #a855f7;
+            --primary-gradient: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+
+            /* Status Colors */
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-orange: #f97316;
+            --accent-rose: #f43f5e;
+            --accent-blue: #3b82f6;
+
+            /* Status Backgrounds */
+            --bg-success: #ecfdf5;
+            --bg-warning: #fffbeb;
+            --bg-danger: #fef2f2;
+            --bg-info: #eff6ff;
+
+            /* Shadows & Radius */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --radius-md: 0.75rem;
+            --radius-lg: 1rem;
         }
 
         * {
@@ -24,461 +51,552 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: #f5f7fa;
-            color: #333;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
             line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 2rem;
         }
 
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
-            color: var(--text-primary);
-            padding: 40px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-        }
-
-        .header h1 {
-            font-size: 2rem;
-            margin-bottom: 10px;
-        }
-
-        .header .url {
-            color: var(--text-secondary);
-            word-break: break-all;
-            font-size: 1.1rem;
-        }
-
-        .header .meta {
-            margin-top: 15px;
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-
-        /* Score Card */
-        .score-section {
-            display: grid;
-            grid-template-columns: 200px 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-
-        .score-card {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
-
-        .score-card .score {
-            font-size: 4rem;
-            font-weight: 700;
-            line-height: 1;
-        }
-
-        .score-card .score.excellent { color: var(--color-pass); }
-        .score-card .score.good { color: var(--color-moderate); }
-        .score-card .score.poor { color: var(--color-serious); }
-        .score-card .score.critical { color: var(--color-critical); }
-
-        .score-card .label {
-            color: #666;
-            margin-top: 10px;
-            font-size: 1.1rem;
-        }
-
-        /* Summary Cards */
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-        }
-
-        .summary-card {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            border-left: 4px solid #ddd;
-        }
-
-        .summary-card.critical { border-color: var(--color-critical); }
-        .summary-card.serious { border-color: var(--color-serious); }
-        .summary-card.moderate { border-color: var(--color-moderate); }
-        .summary-card.minor { border-color: var(--color-minor); }
-        .summary-card.passes { border-color: var(--color-pass); }
-
-        .summary-card .value {
-            font-size: 2.5rem;
+        /* Helper Classes */
+        .text-gradient {
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             font-weight: 700;
         }
 
-        .summary-card.critical .value { color: var(--color-critical); }
-        .summary-card.serious .value { color: var(--color-serious); }
-        .summary-card.moderate .value { color: var(--color-moderate); }
-        .summary-card.minor .value { color: var(--color-minor); }
-        .summary-card.passes .value { color: var(--color-pass); }
-
-        .summary-card .label {
-            color: #666;
-            font-size: 0.9rem;
-            margin-top: 5px;
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
+            margin-bottom: 1.5rem;
         }
 
-        /* Sections */
-        .section {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
-
-        .section h2 {
-            font-size: 1.4rem;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #eee;
-        }
-
-        /* Violations */
-        .violation {
-            border-left: 4px solid #ddd;
-            padding: 20px;
-            margin-bottom: 20px;
-            background: #fafafa;
-            border-radius: 0 8px 8px 0;
-        }
-
-        .violation.critical { border-color: var(--color-critical); }
-        .violation.serious { border-color: var(--color-serious); }
-        .violation.moderate { border-color: var(--color-moderate); }
-        .violation.minor { border-color: var(--color-minor); }
-
-        .violation h3 {
-            font-size: 1.1rem;
-            margin-bottom: 10px;
-        }
-
-        .violation .meta {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
-
-        .violation .tag {
-            font-size: 0.8rem;
-            padding: 3px 10px;
-            border-radius: 4px;
-            background: #e9ecef;
-        }
-
-        .violation .tag.impact {
-            color: white;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .violation.critical .tag.impact { background: var(--color-critical); }
-        .violation.serious .tag.impact { background: var(--color-serious); }
-        .violation.moderate .tag.impact { background: var(--color-moderate); color: #333; }
-        .violation.minor .tag.impact { background: var(--color-minor); }
-
-        .violation .help {
-            color: #666;
-            margin-bottom: 10px;
-        }
-
-        .violation .learn-more {
-            color: #007bff;
-            text-decoration: none;
-        }
-
-        .violation .learn-more:hover {
-            text-decoration: underline;
-        }
-
-        .violation .instances {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #ddd;
-        }
-
-        .violation .instances h4 {
-            font-size: 0.95rem;
-            margin-bottom: 10px;
-            color: #555;
-        }
-
-        .instance {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 10px;
-        }
-
-        .instance code {
-            background: #f0f0f0;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            color: #d63384;
-        }
-
-        .instance pre {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 4px;
-            overflow-x: auto;
-            font-size: 0.85rem;
-            margin: 10px 0;
-            border: 1px solid #e9ecef;
-        }
-
-        .instance .fix {
-            color: var(--color-pass);
-            font-style: italic;
-            font-size: 0.9rem;
-        }
-
-        /* Tools Section */
-        .tools-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .tool-card {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
+        .flex-between {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .tool-card .name {
-            font-weight: 600;
+        .flex-gap {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
         }
 
-        .tool-card .status {
-            padding: 4px 12px;
-            border-radius: 20px;
+        /* Branding Header */
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .brand-name {
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        /* Report Header */
+        .report-header {
+            margin-bottom: 2.5rem;
+        }
+
+        .report-title {
+            font-size: 2.25rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .report-meta {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .report-url {
+            font-family: monospace;
+            background: #f1f5f9;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            color: var(--text-main);
+        }
+
+        /* Score Section */
+        .score-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .overall-score-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: linear-gradient(to bottom right, #ffffff, #f8fafc);
+        }
+
+        .score-ring {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            position: relative;
+            background: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .score-ring::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: conic-gradient(var(--score-color) var(--score-pct), #e2e8f0 0);
+            z-index: -1;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
             font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .tool-card .status.success {
-            background: #d4edda;
-            color: #155724;
+        .stat-critical {
+            color: var(--accent-rose);
+            border-top: 4px solid var(--accent-rose);
         }
 
-        .tool-card .status.error {
-            background: #f8d7da;
-            color: #721c24;
+        .stat-serious {
+            color: var(--accent-orange);
+            border-top: 4px solid var(--accent-orange);
+        }
+
+        .stat-moderate {
+            color: var(--accent-amber);
+            border-top: 4px solid var(--accent-amber);
+        }
+
+        .stat-minor {
+            color: var(--accent-green);
+            border-top: 4px solid var(--accent-green);
+        }
+
+        /* Section Titles */
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .count-badge {
+            background: var(--text-main);
+            color: white;
+            font-size: 0.85rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 99px;
+        }
+
+        /* Violation List */
+        .violation-card {
+            border-left: 5px solid transparent;
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s;
+        }
+
+        .violation-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .violation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .violation-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 99px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .impact-critical {
+            border-left-color: var(--accent-rose);
+        }
+
+        .badge-critical {
+            background: var(--bg-danger);
+            color: var(--accent-rose);
+        }
+
+        .impact-serious {
+            border-left-color: var(--accent-orange);
+        }
+
+        .badge-serious {
+            background: #fff7ed;
+            color: var(--accent-orange);
+        }
+
+        .impact-moderate {
+            border-left-color: var(--accent-amber);
+        }
+
+        .badge-moderate {
+            background: var(--bg-warning);
+            color: #b45309;
+        }
+
+        .impact-minor {
+            border-left-color: var(--accent-green);
+        }
+
+        .badge-minor {
+            background: var(--bg-success);
+            color: var(--accent-green);
+        }
+
+        .violation-desc {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .code-block {
+            background: #f1f5f9;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            border: 1px solid var(--border-light);
+            margin-top: 1rem;
+        }
+
+        .instance-list {
+            margin-top: 1.5rem;
+            border-top: 1px solid var(--border-light);
+            padding-top: 1rem;
+        }
+
+        .instance-item {
+            margin-bottom: 1rem;
+        }
+
+        .selector {
+            color: var(--accent-blue);
+            font-family: monospace;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+
+        /* Tools & Manual Grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 3rem;
+        }
+
+        .tool-list {
+            list-style: none;
+        }
+
+        .tool-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .tool-item:last-child {
+            border-bottom: none;
         }
 
         /* Footer */
         .footer {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-light);
             text-align: center;
-            padding: 30px;
-            color: #666;
+            color: var(--text-muted);
             font-size: 0.9rem;
         }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .score-section {
+            .score-grid {
                 grid-template-columns: 1fr;
             }
 
-            .summary-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .header {
-                padding: 25px;
-            }
-
-            .header h1 {
-                font-size: 1.5rem;
+            .container {
+                padding: 1rem;
             }
         }
 
-        /* Print styles */
+        /* Print */
         @media print {
             body {
                 background: white;
+                font-size: 12px;
             }
 
             .container {
+                padding: 0;
                 max-width: none;
             }
 
-            .header {
-                background: #333;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+            .card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+                break-inside: avoid;
             }
 
-            .section {
-                break-inside: avoid;
+            .no-print {
+                display: none;
+            }
+
+            .score-ring {
+                width: 80px;
+                height: 80px;
+                font-size: 2rem;
+            }
+
+            .score-grid {
+                grid-template-columns: 120px 1fr;
+                gap: 1rem;
+            }
+
+            a {
+                text-decoration: none;
+                color: black;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <header class="header">
-            <h1>WCAG Accessibility Report</h1>
-            <p class="url">{{ report.scan_result.url }}</p>
-            <div class="meta">
-                <span>Scanned: {{ report.scan_result.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}</span>
-                <span>Duration: {{ "%.1f"|format(report.scan_result.duration_seconds or 0) }}s</span>
-                <span>WCAG 2.2</span>
+        <!-- Brand -->
+        <div class="brand-header">
+            <div class="brand-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="4" r="2"></circle>
+                    <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"></path>
+                    <path d="M9 10a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-3z"></path>
+                </svg>
+            </div>
+            <span class="brand-name">WCAG Scanner</span>
+        </div>
+
+        <!-- Header -->
+        <header class="report-header">
+            <h1 class="report-title">Accessibility Audit Report</h1>
+            <div class="report-meta">
+                <p><strong>Target URL:</strong> <span class="report-url">{{ report.scan_result.url }}</span></p>
+                <p style="margin-top: 0.5rem;">
+                    Generated on {{ report.metadata.generated_at.strftime('%B %d, %Y at %H:%M UTC') }} •
+                    Duration: {{ "%.2f"|format(report.scan_result.duration_seconds or 0) }}s
+                </p>
             </div>
         </header>
 
-        <div class="score-section">
-            <div class="score-card">
-                {% set score = report.scan_result.scores.overall %}
-                <div class="score {% if score >= 90 %}excellent{% elif score >= 70 %}good{% elif score >= 50 %}poor{% else %}critical{% endif %}">
+        <!-- Score Section -->
+        <div class="score-grid">
+            {% set score = report.scan_result.scores.overall %}
+            {% set color = '#10b981' %}
+            {% if score < 90 %}{% set color='#f59e0b' %}{% endif %} {% if score < 70 %}{% set color='#f43f5e' %}{% endif
+                %} <div class="card overall-score-card">
+                <div class="score-ring"
+                    style="--score-pct: {{ score }}%; --score-color: {{ color }}; color: {{ color }}">
                     {{ score|int }}
                 </div>
-                <div class="label">Overall Score</div>
-            </div>
+                <h3 style="font-weight: 600;">Overall Score</h3>
+                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.5rem;">WCAG 2.2 Compliance</p>
+        </div>
 
-            <div class="summary-grid">
-                <div class="summary-card">
-                    <div class="value">{{ report.scan_result.summary.total_violations }}</div>
-                    <div class="label">Total Violations</div>
+        <div class="card" style="display: flex; flex-direction: column; justify-content: center;">
+            <h3 style="margin-bottom: 1rem; font-weight: 600;">Issue Breakdown</h3>
+            <div class="stats-grid">
+                <div class="stat-box stat-critical">
+                    <div class="stat-value">{{ report.scan_result.summary.by_impact.critical or 0 }}</div>
+                    <div class="stat-label">Critical</div>
                 </div>
-                <div class="summary-card critical">
-                    <div class="value">{{ report.scan_result.summary.by_impact.critical or 0 }}</div>
-                    <div class="label">Critical</div>
+                <div class="stat-box stat-serious">
+                    <div class="stat-value">{{ report.scan_result.summary.by_impact.serious or 0 }}</div>
+                    <div class="stat-label">Serious</div>
                 </div>
-                <div class="summary-card serious">
-                    <div class="value">{{ report.scan_result.summary.by_impact.serious or 0 }}</div>
-                    <div class="label">Serious</div>
+                <div class="stat-box stat-moderate">
+                    <div class="stat-value">{{ report.scan_result.summary.by_impact.moderate or 0 }}</div>
+                    <div class="stat-label">Moderate</div>
                 </div>
-                <div class="summary-card moderate">
-                    <div class="value">{{ report.scan_result.summary.by_impact.moderate or 0 }}</div>
-                    <div class="label">Moderate</div>
-                </div>
-                <div class="summary-card minor">
-                    <div class="value">{{ report.scan_result.summary.by_impact.minor or 0 }}</div>
-                    <div class="label">Minor</div>
-                </div>
-                <div class="summary-card passes">
-                    <div class="value">{{ report.scan_result.summary.passes }}</div>
-                    <div class="label">Passes</div>
+                <div class="stat-box stat-minor">
+                    <div class="stat-value">{{ report.scan_result.summary.by_impact.minor or 0 }}</div>
+                    <div class="stat-label">Minor</div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <section class="section">
-            <h2>Violations ({{ report.scan_result.summary.total_violations }})</h2>
+    <!-- Violations -->
+    <section>
+        <h2 class="section-title">
+            Detailed Violations
+            <span class="count-badge">{{ report.scan_result.summary.total_violations }}</span>
+        </h2>
 
-            {% if report.scan_result.violations %}
-                {% for violation in report.scan_result.violations %}
-                <div class="violation {{ violation.impact.value }}">
-                    <h3>{{ violation.description }}</h3>
-                    <div class="meta">
-                        <span class="tag impact">{{ violation.impact.value }}</span>
+        {% if report.scan_result.violations %}
+        {% for violation in report.scan_result.violations %}
+        <div class="card violation-card impact-{{ violation.impact.value }}">
+            <div class="violation-header">
+                <div>
+                    <div class="flex-gap" style="margin-bottom: 0.5rem;">
+                        <span class="badge badge-{{ violation.impact.value }}">{{ violation.impact.value }}</span>
                         {% if violation.wcag_criteria %}
-                        <span class="tag">WCAG: {{ violation.wcag_criteria|join(', ') }}</span>
-                        {% endif %}
-                        <span class="tag">{{ violation.detected_by|join(', ') }}</span>
-                    </div>
-
-                    {% if violation.help_text %}
-                    <p class="help">{{ violation.help_text }}</p>
-                    {% endif %}
-
-                    {% if violation.help_url %}
-                    <a href="{{ violation.help_url }}" target="_blank" class="learn-more">Learn more →</a>
-                    {% endif %}
-
-                    {% if violation.instances %}
-                    <div class="instances">
-                        <h4>Affected Elements ({{ violation.instances|length }})</h4>
-                        {% for instance in violation.instances[:5] %}
-                        <div class="instance">
-                            {% if instance.selector %}
-                            <code>{{ instance.selector }}</code>
-                            {% endif %}
-                            {% if instance.html %}
-                            <pre>{{ instance.html[:300] }}</pre>
-                            {% endif %}
-                            {% if instance.fix_suggestion %}
-                            <p class="fix">{{ instance.fix_suggestion }}</p>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                        {% if violation.instances|length > 5 %}
-                        <p style="color: #666; font-style: italic;">
-                            ... and {{ violation.instances|length - 5 }} more instances
-                        </p>
+                        <span class="badge" style="background:#f1f5f9; color:#64748b;">WCAG {{
+                            violation.wcag_criteria|join(', ') }}</span>
                         {% endif %}
                     </div>
-                    {% endif %}
+                    <h3 class="violation-title">{{ violation.description }}</h3>
                 </div>
-                {% endfor %}
-            {% else %}
-                <p style="text-align: center; color: var(--color-pass); padding: 40px; font-size: 1.2rem;">
-                    ✓ No violations found!
-                </p>
-            {% endif %}
-        </section>
+                <a href="{{ violation.help_url }}" target="_blank" class="badge"
+                    style="background:var(--bg-info); color:var(--accent-blue); text-decoration:none;">Docs ↗</a>
+            </div>
 
-        <section class="section">
-            <h2>Tools Used</h2>
-            <div class="tools-grid">
-                {% for name, status in report.scan_result.tools_used.items() %}
-                <div class="tool-card">
-                    <span class="name">{{ name }}</span>
-                    <span class="status {{ status.status }}">
-                        {{ status.status }}
-                        {% if status.duration_ms %} ({{ status.duration_ms }}ms){% endif %}
-                    </span>
+            <p class="violation-desc">{{ violation.help_text }}</p>
+
+            {% if violation.instances %}
+            <div class="instance-list">
+                <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 1rem;">Affected Elements (Top {{
+                    violation.instances[:5]|length }})</h4>
+                {% for instance in violation.instances[:5] %}
+                <div class="instance-item">
+                    {% if instance.selector %}
+                    <span class="selector">{{ instance.selector }}</span>
+                    {% endif %}
+                    {% if instance.html %}
+                    <div class="code-block">{{ instance.html[:250] }}</div>
+                    {% endif %}
+                    {% if instance.fix_suggestion %}
+                    <div style="margin-top:0.5rem; font-size:0.85rem; color:var(--accent-green);">
+                        <strong>Tip:</strong> {{ instance.fix_suggestion }}
+                    </div>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
-        </section>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="card" style="text-align: center; padding: 3rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
+            <h3 style="font-size: 1.5rem; color: var(--accent-green);">Perfect Score!</h3>
+            <p style="color: var(--text-secondary);">No accessibility violations were detected on this page.</p>
+        </div>
+        {% endif %}
+    </section>
 
-        <section class="section">
-            <h2>Manual Testing Required</h2>
-            <p style="color: #666; margin-bottom: 15px;">
-                The following WCAG criteria require manual testing for full compliance verification:
+    <!-- Additional Info -->
+    <div class="info-grid">
+        <div class="card">
+            <h3 style="margin-bottom: 1rem; font-weight: 600;">Manual Review Required</h3>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                Automated tools cannot verify all WCAG criteria. Please review:
             </p>
-            <ul style="padding-left: 20px;">
-                {% for item in report.wcag_coverage.manual_review_needed[:10] %}
-                <li style="margin-bottom: 8px;">
-                    <strong>{{ item.criteria }}</strong> - {{ item.description }}
-                    <br><span style="color: #888; font-size: 0.9rem;">{{ item.reason }}</span>
+            <ul class="tool-list">
+                {% for item in report.wcag_coverage.manual_review_needed[:5] %}
+                <li class="tool-item">
+                    <span style="font-weight: 500; font-size:0.9rem;">{{ item.criteria }}</span>
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">{{ item.description }}</span>
                 </li>
                 {% endfor %}
             </ul>
-        </section>
+        </div>
 
-        <footer class="footer">
-            <p>Generated by WCAG Accessibility Scanner v{{ report.metadata.scanner_version }}</p>
-            <p>Report generated: {{ report.metadata.generated_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
-        </footer>
+        <div class="card">
+            <h3 style="margin-bottom: 1rem; font-weight: 600;">Tools Used</h3>
+            <ul class="tool-list">
+                {% for name, status in report.scan_result.tools_used.items() %}
+                <li class="tool-item">
+                    <span>{{ name }}</span>
+                    <span class="badge" style="background:var(--bg-success); color:var(--accent-green);">{{
+                        status.status }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; {{ report.metadata.generated_at.year }} WCAG Scanner V{{ report.metadata.scanner_version }}. All
+            rights reserved.</p>
+    </footer>
     </div>
 </body>
+
 </html>

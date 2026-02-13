@@ -8,6 +8,7 @@ from scanner_v2.api.dependencies import (
     get_scan_repository,
     get_page_repository,
     get_issue_repository,
+    get_user_repository,
     get_current_active_user,
     get_queue_manager
 )
@@ -15,6 +16,7 @@ from scanner_v2.database.repositories.project_repo import ProjectRepository
 from scanner_v2.database.repositories.scan_repo import ScanRepository
 from scanner_v2.database.repositories.page_repo import PageRepository
 from scanner_v2.database.repositories.issue_repo import IssueRepository
+from scanner_v2.database.repositories.user_repo import UserRepository
 from scanner_v2.database.models import (
     User, ScanStatus, ScanConfig, ScanType,
     ImpactLevel, WCAGLevel, Principle
@@ -560,6 +562,7 @@ async def delete_scan(
 async def quick_scan(
     project_repo: Annotated[ProjectRepository, Depends(get_project_repository)],
     scan_repo: Annotated[ScanRepository, Depends(get_scan_repository)],
+    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
     queue_manager: Annotated[QueueManager, Depends(get_queue_manager)],
     url: str = Query(..., description="URL to scan"),
     max_pages: int = Query(1, description="Maximum pages to scan"),
@@ -598,9 +601,9 @@ async def quick_scan(
 
     # Create or get temporary user for quick scans
     temp_user_email = "quickscan@temp.local"
-    temp_user = await project_repo.user_repo.get_by_email(temp_user_email)
+    temp_user = await user_repo.get_by_email(temp_user_email)
     if not temp_user:
-        temp_user = await project_repo.user_repo.create(
+        temp_user = await user_repo.create(
             email=temp_user_email,
             password="quickscan_temp_password",
             name="Quick Scan User",

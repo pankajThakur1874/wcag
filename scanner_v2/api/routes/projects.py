@@ -5,16 +5,22 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 
 from scanner_v2.api.dependencies import (
     get_project_repository,
+    get_scan_repository,
+    get_queue_manager,
     get_current_active_user
 )
 from scanner_v2.database.repositories.project_repo import ProjectRepository
-from scanner_v2.database.models import User
+from scanner_v2.database.repositories.scan_repo import ScanRepository
+from scanner_v2.database.models import User, ScanConfig, ScanType
+from scanner_v2.workers.queue_manager import QueueManager
 from scanner_v2.schemas.project import (
     ProjectCreateRequest,
     ProjectUpdateRequest,
     ProjectResponse,
     ProjectListResponse
 )
+from scanner_v2.schemas.scan import ScanResponse, JobType, JobPriority
+from pydantic import BaseModel
 from scanner_v2.utils.logger import get_logger
 from scanner_v2.utils.exceptions import ProjectNotFoundException
 
@@ -283,3 +289,100 @@ async def delete_project(
     await project_repo.delete(project_id)
 
     logger.info(f"Project deleted: {project_id} by user {current_user.email}")
+
+
+class ProjectScanRequest(BaseModel):
+    """Request to start a project scan."""
+    scan_type: str = "full"
+    scanners: Optional[list[str]] = None
+
+
+@router.post("/{project_id}/scans", response_model=ScanResponse, status_code=status.HTTP_201_CREATED)
+async def create_project_scan(
+    project_id: str,
+    request: ProjectScanRequest,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    project_repo: Annotated[ProjectRepository, Depends(get_project_repository)],
+    scan_repo: Annotated[ScanRepository, Depends(get_scan_repository)],
+    queue_manager: Annotated[QueueManager, Depends(get_queue_manager)]
+):
+    """
+    Create and start a new scan for a project.
+
+    Args:
+        project_id: Project ID
+        request: Scan configuration request
+        current_user: Current authenticated user
+        project_repo: Project repository
+        scan_repo: Scan repository
+        queue_manager: Queue manager
+
+    Returns:
+        Created scan
+
+    Raises:
+        HTTPException: If project not found or access denied
+    """
+    # Verify project exists and user has access
+    try:
+        project = await project_repo.get_by_id(project_id)
+    except ProjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project not found: {project_id}"
+        )
+
+    if project.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this project"
+        )
+
+    # Create scan configuration based on project settings
+    scan_config = ScanConfig(
+        url=project.base_url,
+        max_pages=project.settings.max_pages if project.settings else 10,
+        scanners=request.scanners or project.settings.scanners if project.settings and project.settings.scanners else None,
+        scan_depth=project.settings.scan_depth if project.settings else 3,
+        follow_external_links=project.settings.follow_external_links if project.settings else False
+    )
+
+    # Determine scan type
+    scan_type = ScanType.FULL if request.scan_type == "full" else ScanType.QUICK
+
+    # Create scan
+    scan = await scan_repo.create(
+        project_id=project_id,
+        user_id=current_user.id,
+        scan_type=scan_type,
+        config=scan_config
+    )
+
+    # Enqueue scan job
+    job_id = await queue_manager.enqueue_job(
+        job_type=JobType.SCAN,
+        priority=JobPriority.NORMAL,
+        data={
+            "scan_id": scan.id,
+            "project_id": project_id,
+            "user_id": current_user.id,
+            "config": scan_config.model_dump()
+        }
+    )
+
+    logger.info(f"Project scan created: {scan.id} for project {project_id} by user {current_user.email}")
+
+    return ScanResponse(
+        id=scan.id,
+        project_id=scan.project_id,
+        user_id=scan.user_id,
+        scan_type=scan.scan_type,
+        status=scan.status,
+        config=scan.config,
+        scores=scan.scores,
+        summary=scan.summary,
+        created_at=scan.created_at,
+        updated_at=scan.updated_at,
+        started_at=scan.started_at,
+        completed_at=scan.completed_at
+    )

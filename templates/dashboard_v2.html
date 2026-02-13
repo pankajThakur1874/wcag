@@ -1392,6 +1392,9 @@
             } catch(e) { console.error(e); }
         }
         
+        let currentScanId = null;
+        let scanPollingInterval = null;
+
         async function startQuickScan() {
              const url = document.getElementById('scan-url').value;
              const maxPages = document.getElementById('site-wide-toggle').checked ?
@@ -1410,9 +1413,14 @@
 
                  if(res.ok) {
                      const data = await res.json();
-                     showToast(`Scan started! ID: ${data.id}`, 'success');
-                     // Refresh the scans list
-                     setTimeout(() => fetchScans(), 2000);
+                     currentScanId = data.id;
+                     showToast(`Scan started! Monitoring progress...`, 'success');
+
+                     // Show progress UI
+                     showScanProgress();
+
+                     // Start polling for updates
+                     startScanPolling(data.id);
                  } else {
                      const error = await res.json();
                      showToast(error.detail || 'Scan failed to start', 'error');
@@ -1422,11 +1430,105 @@
                  showToast('Error starting scan', 'error');
              }
         }
+
+        function showScanProgress() {
+            document.getElementById('scan-progress').classList.remove('hidden');
+            document.getElementById('scan-status-text').innerText = 'Initializing...';
+            document.getElementById('scan-percent').innerText = '0%';
+            document.getElementById('progress-bar-fill').style.width = '0%';
+        }
+
+        function hideScanProgress() {
+            document.getElementById('scan-progress').classList.add('hidden');
+        }
+
+        function startScanPolling(scanId) {
+            // Clear any existing interval
+            if (scanPollingInterval) {
+                clearInterval(scanPollingInterval);
+            }
+
+            // Poll every 2 seconds
+            scanPollingInterval = setInterval(() => pollScanStatus(scanId), 2000);
+
+            // Also poll immediately
+            pollScanStatus(scanId);
+        }
+
+        async function pollScanStatus(scanId) {
+            try {
+                const res = await fetch(`${API_BASE}/scans/${scanId}`, {
+                    headers: authToken ? {'Authorization': `Bearer ${authToken}`} : {}
+                });
+
+                if (!res.ok) return;
+
+                const scan = await res.json();
+                updateScanProgress(scan);
+
+                // Stop polling if completed or failed
+                if (scan.status === 'completed' || scan.status === 'failed') {
+                    clearInterval(scanPollingInterval);
+                    scanPollingInterval = null;
+
+                    setTimeout(() => {
+                        hideScanProgress();
+                        fetchScans(); // Refresh dashboard
+                        if (scan.status === 'completed') {
+                            showToast(`Scan completed! Score: ${scan.scores?.overall || 0}%`, 'success');
+                        } else {
+                            showToast('Scan failed', 'error');
+                        }
+                    }, 1000);
+                }
+            } catch(e) {
+                console.error('Polling error:', e);
+            }
+        }
+
+        function updateScanProgress(scan) {
+            const statusText = document.getElementById('scan-status-text');
+            const percentText = document.getElementById('scan-percent');
+            const progressBar = document.getElementById('progress-bar-fill');
+
+            let percent = 0;
+            let message = 'Starting...';
+
+            switch(scan.status) {
+                case 'pending':
+                    percent = 10;
+                    message = 'Queued...';
+                    break;
+                case 'running':
+                    percent = 30;
+                    message = 'Crawling pages...';
+                    break;
+                case 'scanning':
+                    // Calculate based on pages scanned
+                    const pagesScanned = scan.summary?.pages_scanned || 0;
+                    const totalPages = scan.config?.max_pages || 1;
+                    percent = 30 + Math.floor((pagesScanned / totalPages) * 60);
+                    message = `Scanning page ${pagesScanned} of ${totalPages}...`;
+                    break;
+                case 'completed':
+                    percent = 100;
+                    message = 'Scan complete!';
+                    break;
+                case 'failed':
+                    percent = 0;
+                    message = 'Scan failed';
+                    break;
+            }
+
+            statusText.innerText = message;
+            percentText.innerText = percent + '%';
+            progressBar.style.width = percent + '%';
+        }
         
         async function startProjectScan() {
              const pid = document.getElementById('scan-project-select').value;
              if(!pid) return showToast("Please select a project", "error");
-             
+
              try {
                 const res = await fetch(`${API_BASE}/projects/${pid}/scans`, {
                      method: 'POST',
@@ -1436,10 +1538,17 @@
                      },
                      body: JSON.stringify({ scan_type: 'full' })
                 });
-                
+
                 if(res.ok) {
-                    showToast("Scan started successfully", "success");
-                    // Optionally move to dashboard or show progress
+                    const data = await res.json();
+                    currentScanId = data.id;
+                    showToast("Scan started! Monitoring progress...", "success");
+
+                    // Show progress UI
+                    showScanProgress();
+
+                    // Start polling for updates
+                    startScanPolling(data.id);
                 } else {
                     showToast("Failed to start scan", "error");
                 }
