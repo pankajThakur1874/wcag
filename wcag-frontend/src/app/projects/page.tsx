@@ -19,7 +19,15 @@ export default function ProjectsPage() {
     const loadProjects = async () => {
         try {
             const response = await api.getProjects({ limit: 100 });
-            setProjects(response.data.items);
+            // Handle both paginated ({items: [...]}) and direct array responses
+            const data = response.data;
+            if (Array.isArray(data)) {
+                setProjects(data);
+            } else if (data?.items && Array.isArray(data.items)) {
+                setProjects(data.items);
+            } else {
+                setProjects([]);
+            }
         } catch (error) {
             console.error('Failed to load projects:', error);
         } finally {

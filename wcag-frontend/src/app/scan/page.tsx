@@ -1,21 +1,111 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from 'react';
+import { api } from '@/lib/api';
+import type { Project } from '@/lib/types';
 
 export default function ScanPage() {
     const [activeTab, setActiveTab] = useState<'quick' | 'project'>('quick');
     const [scanning, setScanning] = useState(false);
     const [progress, setProgress] = useState(0);
+    const [scanStatus, setScanStatus] = useState('');
+    const [scanResult, setScanResult] = useState<{ score?: number; issuesCount?: number } | null>(null);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [error, setError] = useState('');
 
-    const startScan = () => {
+    // Load projects for the project scan dropdown
+    useEffect(() => {
+        const loadProjects = async () => {
+            try {
+                const response = await api.getProjects({ limit: 100 });
+                const data = response.data;
+                if (Array.isArray(data)) {
+                    setProjects(data);
+                } else if (data?.items && Array.isArray(data.items)) {
+                    setProjects(data.items);
+                } else {
+                    setProjects([]);
+                }
+            } catch (err) {
+                console.error('Failed to load projects:', err);
+            }
+        };
+        loadProjects();
+    }, []);
+
+    const pollScanStatus = useCallback(async (scanId: string) => {
+        const poll = async () => {
+            try {
+                const response = await api.getScanStatus(scanId);
+                const data = response.data;
+
+                const pct = data.progress?.percentage ?? 0;
+                setProgress(pct);
+                setScanStatus(data.status);
+
+                if (data.status === 'completed') {
+                    setProgress(100);
+                    setScanResult({ score: data.score, issuesCount: data.issuesCount });
+                    setScanning(false);
+                    return;
+                }
+
+                if (data.status === 'failed') {
+                    setError('Scan failed. Please try again.');
+                    setScanning(false);
+                    return;
+                }
+
+                // Keep polling
+                setTimeout(poll, 2000);
+            } catch (err) {
+                console.error('Poll error:', err);
+                setError('Lost connection to scan. Check the Scans page for status.');
+                setScanning(false);
+            }
+        };
+
+        poll();
+    }, []);
+
+    const startQuickScan = async () => {
+        setError('');
+        setScanResult(null);
+        const urlInput = document.querySelector<HTMLInputElement>('input[name="scanUrl"]');
+        const url = urlInput?.value?.trim();
+        if (!url) { setError('Please enter a URL'); return; }
+
         setScanning(true);
         setProgress(0);
-        let p = 0;
-        const interval = setInterval(() => {
-            p += Math.random() * 15;
-            if (p >= 100) { p = 100; clearInterval(interval); }
-            setProgress(Math.round(p));
-        }, 400);
+        setScanStatus('queued');
+
+        try {
+            const response = await api.startQuickScan({ url });
+            pollScanStatus(response.data.scanId);
+        } catch (err: any) {
+            setError(err.response?.data?.error?.message || 'Failed to start scan');
+            setScanning(false);
+        }
+    };
+
+    const startProjectScan = async () => {
+        setError('');
+        setScanResult(null);
+        const projectSelect = document.querySelector<HTMLSelectElement>('select[name="projectId"]');
+        const projectId = projectSelect?.value;
+        if (!projectId) { setError('Please select a project'); return; }
+
+        setScanning(true);
+        setProgress(0);
+        setScanStatus('queued');
+
+        try {
+            const response = await api.startProjectScan({ projectId });
+            pollScanStatus(response.data.scanId);
+        } catch (err: any) {
+            setError(err.response?.data?.error?.message || 'Failed to start scan');
+            setScanning(false);
+        }
     };
 
     return (
@@ -46,25 +136,10 @@ export default function ScanPage() {
                         <div style={{ marginBottom: '2rem' }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Website URL</label>
                             <div style={{ display: 'flex', gap: '1rem' }}>
-                                <input type="url" className="auth-input" style={{ margin: 0 }} placeholder="https://example.com" defaultValue="https://example.com" />
-                                <button className="btn-gradient" onClick={startScan}>Start Scan</button>
-                            </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '2rem', marginBottom: '2rem' }}>
-                            <div>
-                                <label style={{ fontWeight: 500, marginRight: '1rem' }}>Site-Wide Scan</label>
-                                <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '26px' }}>
-                                    <input type="checkbox" style={{ opacity: 0, width: 0, height: 0 }} />
-                                    <span style={{ position: 'absolute', cursor: 'pointer', inset: 0, backgroundColor: '#cbd5e1', borderRadius: '34px', transition: '.4s' }} />
-                                </label>
-                            </div>
-                            <div>
-                                <label style={{ fontSize: '0.9rem', display: 'block' }}>Max Pages</label>
-                                <select style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-light)', fontFamily: 'inherit' }}>
-                                    <option value="10">10</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                </select>
+                                <input type="url" name="scanUrl" className="auth-input" style={{ margin: 0 }} placeholder="https://example.com" />
+                                <button className="btn-gradient" onClick={startQuickScan} disabled={scanning}>
+                                    {scanning ? 'Scanning...' : 'Start Scan'}
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -75,14 +150,23 @@ export default function ScanPage() {
                     <div>
                         <div style={{ marginBottom: '2rem' }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Select Project</label>
-                            <select className="form-select">
+                            <select name="projectId" className="form-select" style={{ marginBottom: '1rem' }}>
                                 <option value="">-- Select Project --</option>
-                                <option value="1">Corporate Website</option>
-                                <option value="2">E-commerce App</option>
-                                <option value="3">Gov Portal</option>
+                                {projects.map((p) => (
+                                    <option key={p.id} value={p.id}>{p.name} ({p.url})</option>
+                                ))}
                             </select>
-                            <button className="btn-gradient" onClick={startScan}>Start Project Scan</button>
+                            <button className="btn-gradient" onClick={startProjectScan} disabled={scanning}>
+                                {scanning ? 'Scanning...' : 'Start Project Scan'}
+                            </button>
                         </div>
+                    </div>
+                )}
+
+                {/* Error */}
+                {error && (
+                    <div style={{ color: 'red', padding: '0.75rem', background: '#fef2f2', borderRadius: 'var(--radius-md)', marginTop: '1rem' }}>
+                        {error}
                     </div>
                 )}
 
@@ -90,12 +174,25 @@ export default function ScanPage() {
                 {scanning && (
                     <div style={{ marginTop: '2rem', background: '#f8fafc', padding: '1.5rem', borderRadius: 'var(--radius-md)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                            <span>{progress >= 100 ? 'Scan Complete!' : 'Scanning...'}</span>
+                            <span>{scanStatus === 'completed' ? 'Scan Complete!' : `Scanning... (${scanStatus})`}</span>
                             <span>{progress}%</span>
                         </div>
                         <div style={{ height: '10px', background: '#e2e8f0', borderRadius: '5px', overflow: 'hidden' }}>
                             <div style={{ height: '100%', width: `${progress}%`, background: 'var(--primary-gradient)', transition: 'width 0.3s' }} />
                         </div>
+                    </div>
+                )}
+
+                {/* Scan Result */}
+                {scanResult && (
+                    <div style={{ marginTop: '2rem', padding: '1.5rem', background: '#ecfdf5', borderRadius: 'var(--radius-md)', border: '1px solid #a7f3d0' }}>
+                        <h3 style={{ color: '#065f46', marginBottom: '0.5rem' }}>✅ Scan Complete!</h3>
+                        <p style={{ color: '#047857' }}>
+                            Score: <strong>{scanResult.score ?? '–'}%</strong> • Issues found: <strong>{scanResult.issuesCount ?? 0}</strong>
+                        </p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                            View detailed results on the Issues or Reports page.
+                        </p>
                     </div>
                 )}
             </div>
