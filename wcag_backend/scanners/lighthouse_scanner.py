@@ -108,9 +108,8 @@ class LighthouseScanner(BaseScanner):
             )
 
             if process.returncode != 0:
-                logger.warning(f"Lighthouse exited with code {process.returncode}")
-                if stderr:
-                    logger.debug(f"Lighthouse stderr: {stderr.decode()}")
+                error_msg = stderr.decode() if stderr else "No error output"
+                logger.warning(f"Lighthouse exited with code {process.returncode}: {error_msg}")
 
             # Read results
             output_file = Path(output_path)
@@ -127,7 +126,8 @@ class LighthouseScanner(BaseScanner):
             # Extract score
             categories = results.get("categories", {})
             accessibility = categories.get("accessibility", {})
-            self._score = accessibility.get("score", 0) * 100
+            score = accessibility.get("score")
+            self._score = (score * 100) if score is not None else 0
 
             # Extract violations from audits
             audits = results.get("audits", {})

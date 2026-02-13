@@ -40,6 +40,7 @@ class ResultsAggregator:
         config = get_config()
         self.tools = tools or config.scanning.default_scanners
         self._browser_manager: Optional[BrowserManager] = None
+        self._owns_browser = False
 
     async def scan(self, url: str) -> ScanResult:
         """
@@ -61,9 +62,11 @@ class ResultsAggregator:
         )
 
         try:
-            # Start shared browser
-            self._browser_manager = BrowserManager()
-            await self._browser_manager.start()
+            # Start shared browser if not already provided
+            if self._browser_manager is None:
+                self._browser_manager = BrowserManager()
+                await self._browser_manager.start()
+                self._owns_browser = True
 
             # Run scanners concurrently
             all_violations = []
@@ -186,10 +189,11 @@ class ResultsAggregator:
             return result
 
         finally:
-            # Clean up browser
-            if self._browser_manager:
+            # Clean up browser only if we created it
+            if self._owns_browser and self._browser_manager:
                 await self._browser_manager.stop()
                 self._browser_manager = None
+                self._owns_browser = False
 
     def _deduplicate_violations(self, violations: list[Violation]) -> list[Violation]:
         """
