@@ -94,8 +94,8 @@ async def list_reports(
 @router.get("/{report_id}/download")
 async def download_report(
     report_id: str,
+    current_user: CurrentUser,
     format: str = Query("html", pattern="^(html|json|csv)$"),
-    current_user: CurrentUser = Depends(),
     scan_repo: ScanRepository = Depends(get_scan_repository),
     issue_repo: IssueRepository = Depends(get_issue_repository)
 ):

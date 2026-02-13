@@ -33,8 +33,8 @@ def get_scan_repository(db: AsyncIOMotorDatabase = Depends(get_db)) -> ScanRepos
 
 @router.get("/scans/{scan_id}/issues", response_model=PaginatedResponse[IssueResponse])
 async def list_issues(
+    current_user: CurrentUser,
     scan_id: str = Path(..., alias="scan_id"),
-    current_user: CurrentUser = Depends(),
     issue_repo: IssueRepository = Depends(get_issue_repository),
     scan_repo: ScanRepository = Depends(get_scan_repository),
     page: int = Query(1, ge=1),

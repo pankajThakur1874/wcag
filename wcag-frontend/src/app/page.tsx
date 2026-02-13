@@ -17,7 +17,15 @@ export default function Dashboard() {
           api.getDashboardPages({ limit: 10 })
         ]);
         setStats(statsRes.data);
-        setPages(pagesRes.data.items);
+        // Handle both paginated ({items: [...]}) and direct array responses
+        const pagesData = pagesRes.data;
+        if (Array.isArray(pagesData)) {
+          setPages(pagesData);
+        } else if (pagesData?.items && Array.isArray(pagesData.items)) {
+          setPages(pagesData.items);
+        } else {
+          setPages([]);
+        }
       } catch (error) {
         console.error('Failed to load dashboard:', error);
       } finally {
@@ -32,12 +40,13 @@ export default function Dashboard() {
     return <div>Loading...</div>;
   }
 
-  const score = Math.round(stats.avgScore);
+  const score = Math.round(stats.avgScore || 0);
   const dashOffset = 440 - (440 * score) / 100;
 
   // Calculate bar widths based on total issues
-  const totalIssues = stats.totalIssues || 1; // Prevent division by zero
-  const getBarPercentage = (count: number) => Math.round((count / totalIssues) * 100);
+  const impact = stats.issuesByImpact || { critical: 0, serious: 0, moderate: 0, minor: 0 };
+  const totalIssues = stats.totalIssues || (impact.critical + impact.serious + impact.moderate + impact.minor) || 1;
+  const getBarPercentage = (count: number) => Math.max(Math.round((count / totalIssues) * 100), count > 0 ? 5 : 0);
 
   return (
     <>
@@ -98,10 +107,10 @@ export default function Dashboard() {
           <h3 style={{ marginBottom: '1rem' }}>Issues by Impact</h3>
           <div className="bar-chart">
             {[
-              { label: 'Critical', value: getBarPercentage(stats.issuesByImpact.critical), count: stats.issuesByImpact.critical, color: 'var(--grad-danger)' },
-              { label: 'Serious', value: getBarPercentage(stats.issuesByImpact.serious), count: stats.issuesByImpact.serious, color: 'linear-gradient(135deg, var(--accent-orange), #ea580c)' },
-              { label: 'Moderate', value: getBarPercentage(stats.issuesByImpact.moderate), count: stats.issuesByImpact.moderate, color: 'var(--grad-warning)' },
-              { label: 'Minor', value: getBarPercentage(stats.issuesByImpact.minor), count: stats.issuesByImpact.minor, color: 'var(--grad-success)' },
+              { label: 'Critical', value: getBarPercentage(impact.critical), count: impact.critical, color: 'var(--grad-danger)' },
+              { label: 'Serious', value: getBarPercentage(impact.serious), count: impact.serious, color: 'linear-gradient(135deg, var(--accent-orange), #ea580c)' },
+              { label: 'Moderate', value: getBarPercentage(impact.moderate), count: impact.moderate, color: 'var(--grad-warning)' },
+              { label: 'Minor', value: getBarPercentage(impact.minor), count: impact.minor, color: 'var(--grad-success)' },
             ].map((bar) => (
               <div key={bar.label} className="bar-row">
                 <span className="bar-label">{bar.label} ({bar.count})</span>
