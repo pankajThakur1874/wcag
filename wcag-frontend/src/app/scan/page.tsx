@@ -50,6 +50,9 @@ export default function ScanPage() {
     const [currentUrl, setCurrentUrl] = useState<string | null>(null);
     const [pagesScanned, setPagesScanned] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+    const [siteWide, setSiteWide] = useState(false);
+    const [maxPages, setMaxPages] = useState(10);
+    const [maxDepth, setMaxDepth] = useState(3);
 
     // Load projects for the project scan dropdown
     useEffect(() => {
@@ -126,7 +129,13 @@ export default function ScanPage() {
         setScanStatus('queued');
 
         try {
-            const response = await api.startQuickScan({ url, scanners: selectedScanners });
+            const response = await api.startQuickScan({
+                url,
+                scanners: selectedScanners,
+                siteWide,
+                maxPages: siteWide ? maxPages : undefined,
+                maxDepth: siteWide ? maxDepth : undefined
+            });
             pollScanStatus(response.data.scanId);
         } catch (err: any) {
             setError(err.response?.data?.error?.message || 'Failed to start scan');
@@ -167,13 +176,19 @@ export default function ScanPage() {
         const projectSelect = document.querySelector<HTMLSelectElement>('select[name="projectId"]');
         const projectId = projectSelect?.value;
         if (!projectId) { setError('Please select a project'); return; }
+        if (selectedScanners.length === 0) { setError('Please select at least one scanner'); return; }
 
         setScanning(true);
         setProgress(0);
         setScanStatus('queued');
 
         try {
-            const response = await api.startProjectScan({ projectId });
+            const response = await api.startProjectScan({
+                projectId,
+                scanners: selectedScanners,
+                maxPages: siteWide ? maxPages : undefined,
+                maxDepth: siteWide ? maxDepth : undefined
+            });
             pollScanStatus(response.data.scanId);
         } catch (err: any) {
             setError(err.response?.data?.error?.message || 'Failed to start scan');
@@ -209,6 +224,75 @@ export default function ScanPage() {
                         <div style={{ marginBottom: '1.5rem' }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Website URL</label>
                             <input type="url" name="scanUrl" className="auth-input" style={{ margin: 0 }} placeholder="https://example.com" />
+                        </div>
+
+                        {/* Scan Type Selection */}
+                        <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                            <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 500 }}>Scan Type</label>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                    <input
+                                        type="radio"
+                                        name="scanType"
+                                        checked={!siteWide}
+                                        onChange={() => setSiteWide(false)}
+                                        style={{ cursor: 'pointer' }}
+                                    />
+                                    <span>
+                                        <strong>Single Page</strong>
+                                        <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Scan only the specified URL</span>
+                                    </span>
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                    <input
+                                        type="radio"
+                                        name="scanType"
+                                        checked={siteWide}
+                                        onChange={() => setSiteWide(true)}
+                                        style={{ cursor: 'pointer' }}
+                                    />
+                                    <span>
+                                        <strong>Site-wide</strong>
+                                        <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Crawl and scan multiple pages</span>
+                                    </span>
+                                </label>
+                            </div>
+
+                            {/* Site-wide options */}
+                            {siteWide && (
+                                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 500 }}>
+                                            Max Pages
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            value={maxPages}
+                                            onChange={(e) => setMaxPages(parseInt(e.target.value) || 10)}
+                                            className="auth-input"
+                                            style={{ margin: 0, fontSize: '0.9rem' }}
+                                        />
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Max: 100 pages</span>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 500 }}>
+                                            Max Depth
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="10"
+                                            value={maxDepth}
+                                            onChange={(e) => setMaxDepth(parseInt(e.target.value) || 3)}
+                                            className="auth-input"
+                                            style={{ margin: 0, fontSize: '0.9rem' }}
+                                        />
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Max: 10 levels</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Scanner Selection */}
@@ -247,18 +331,115 @@ export default function ScanPage() {
                 {/* Project Scan Form */}
                 {activeTab === 'project' && (
                     <div>
-                        <div style={{ marginBottom: '2rem' }}>
+                        <div style={{ marginBottom: '1.5rem' }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Select Project</label>
-                            <select name="projectId" className="form-select" style={{ marginBottom: '1rem' }}>
+                            <select name="projectId" className="form-select" style={{ margin: 0 }}>
                                 <option value="">-- Select Project --</option>
                                 {projects.map((p) => (
                                     <option key={p.id} value={p.id}>{p.name} ({p.url})</option>
                                 ))}
                             </select>
-                            <button className="btn-gradient" onClick={startProjectScan} disabled={scanning}>
-                                {scanning ? 'Scanning...' : 'Start Project Scan'}
-                            </button>
                         </div>
+
+                        {/* Scan Type Selection */}
+                        <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                            <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 500 }}>Scan Type</label>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                    <input
+                                        type="radio"
+                                        name="projectScanType"
+                                        checked={!siteWide}
+                                        onChange={() => setSiteWide(false)}
+                                        style={{ cursor: 'pointer' }}
+                                    />
+                                    <span>
+                                        <strong>Single Page</strong>
+                                        <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Scan only the project's main URL</span>
+                                    </span>
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                    <input
+                                        type="radio"
+                                        name="projectScanType"
+                                        checked={siteWide}
+                                        onChange={() => setSiteWide(true)}
+                                        style={{ cursor: 'pointer' }}
+                                    />
+                                    <span>
+                                        <strong>Site-wide</strong>
+                                        <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Crawl and scan multiple pages</span>
+                                    </span>
+                                </label>
+                            </div>
+
+                            {/* Site-wide options */}
+                            {siteWide && (
+                                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 500 }}>
+                                            Max Pages
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            value={maxPages}
+                                            onChange={(e) => setMaxPages(parseInt(e.target.value) || 10)}
+                                            className="auth-input"
+                                            style={{ margin: 0, fontSize: '0.9rem' }}
+                                        />
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Max: 100 pages</span>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 500 }}>
+                                            Max Depth
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="10"
+                                            value={maxDepth}
+                                            onChange={(e) => setMaxDepth(parseInt(e.target.value) || 3)}
+                                            className="auth-input"
+                                            style={{ margin: 0, fontSize: '0.9rem' }}
+                                        />
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Max: 10 levels</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Scanner Selection */}
+                        <div style={{ marginBottom: '2rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                <label style={{ fontWeight: 500 }}>Scanners ({selectedScanners.length} selected)</label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowScannerModal(true)}
+                                    style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', background: 'white', cursor: 'pointer', fontFamily: 'inherit' }}
+                                >
+                                    Configure Scanners
+                                </button>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                {selectedScanners.map(scannerId => {
+                                    const scanner = ALL_SCANNERS.find(s => s.id === scannerId);
+                                    return (
+                                        <span key={scannerId} style={{ fontSize: '0.75rem', background: '#e0e7ff', color: '#4c1d95', padding: '0.25rem 0.6rem', borderRadius: '0.25rem' }}>
+                                            {scanner?.name || scannerId}
+                                        </span>
+                                    );
+                                })}
+                                {selectedScanners.length === 0 && (
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No scanners selected</span>
+                                )}
+                            </div>
+                        </div>
+
+                        <button className="btn-gradient" onClick={startProjectScan} disabled={scanning} style={{ width: '100%' }}>
+                            {scanning ? 'Scanning...' : 'Start Project Scan'}
+                        </button>
                     </div>
                 )}
 

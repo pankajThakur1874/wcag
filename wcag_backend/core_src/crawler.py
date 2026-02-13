@@ -98,7 +98,7 @@ class SiteCrawler:
                     continue
 
                 if self._is_disallowed(url):
-                    logger.debug(f"Skipping disallowed URL: {url}")
+                    # Silently skip disallowed URLs
                     continue
 
                 self._visited.add(url)
@@ -113,16 +113,19 @@ class SiteCrawler:
                     if self._on_page_discovered:
                         self._on_page_discovered(url, len(result.pages_found))
 
-                    logger.info(f"Crawled ({len(result.pages_found)}/{self.max_pages}): {url}")
-
                     # Add discovered links to queue
                     if depth < self.max_depth:
+                        new_links_count = 0
                         for link in links:
                             if link not in self._visited and link not in [u for u, _ in self._to_visit]:
                                 self._to_visit.append((link, depth + 1))
+                                new_links_count += 1
+
+                        if new_links_count > 0:
+                            logger.info(f"   └─ Found {new_links_count} new links (depth {depth + 1})")
 
                 except Exception as e:
-                    logger.warning(f"Failed to crawl {url}: {e}")
+                    logger.warning(f"⚠️  Failed to crawl {url}: {e}")
                     result.pages_failed.append(url)
 
             return result
@@ -133,47 +136,204 @@ class SiteCrawler:
                 self._browser_manager = None
 
     async def _extract_links(self, url: str) -> list[str]:
-        """Extract all links from a page."""
+        """Extract all links from a page including dynamic content."""
         links = []
+        all_found_links = []
+        filtered_out = []
 
         try:
             async with self._browser_manager.get_page(url) as page:
-                # Get all anchor tags
+                # Wait for network to be idle (JavaScript to load)
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=5000)
+                except Exception:
+                    pass  # Continue even if timeout
+
+                # Expand dropdowns and hidden navigation
+                try:
+                    await page.evaluate("""
+                        () => {
+                            // Click on common dropdown triggers
+                            const dropdownTriggers = document.querySelectorAll(
+                                '[class*="dropdown"], [class*="menu-toggle"], ' +
+                                '[aria-haspopup="true"], [data-toggle="dropdown"], ' +
+                                'button[class*="nav"], .navbar-toggler, .hamburger, ' +
+                                '[class*="mobile"], [id*="menu"]'
+                            );
+
+                            dropdownTriggers.forEach(trigger => {
+                                try {
+                                    // Make hidden content visible
+                                    if (trigger.nextElementSibling) {
+                                        trigger.nextElementSibling.style.display = 'block';
+                                        trigger.nextElementSibling.style.visibility = 'visible';
+                                        trigger.nextElementSibling.style.opacity = '1';
+                                    }
+                                    // Set aria-expanded
+                                    trigger.setAttribute('aria-expanded', 'true');
+                                } catch (e) {}
+                            });
+
+                            // Expand all details/summary elements
+                            document.querySelectorAll('details').forEach(details => {
+                                details.open = true;
+                            });
+
+                            // Show all hidden menus
+                            document.querySelectorAll('[style*="display: none"], [style*="visibility: hidden"]').forEach(el => {
+                                if (el.tagName === 'NAV' || el.className.includes('menu') || el.className.includes('nav')) {
+                                    el.style.display = 'block';
+                                    el.style.visibility = 'visible';
+                                }
+                            });
+                        }
+                    """)
+                    await page.wait_for_timeout(500)
+                except Exception:
+                    pass
+
+                # Scroll to load lazy content
+                try:
+                    await page.evaluate("""
+                        async () => {
+                            await new Promise((resolve) => {
+                                let totalHeight = 0;
+                                const distance = 100;
+                                const timer = setInterval(() => {
+                                    window.scrollBy(0, distance);
+                                    totalHeight += distance;
+                                    if(totalHeight >= document.body.scrollHeight){
+                                        clearInterval(timer);
+                                        window.scrollTo(0, 0);
+                                        resolve();
+                                    }
+                                }, 100);
+                            });
+                        }
+                    """)
+                    await page.wait_for_timeout(500)
+                except Exception:
+                    pass
+
+                # Extract links from multiple sources
                 hrefs = await page.evaluate("""
                     () => {
-                        const links = [];
-                        const anchors = document.querySelectorAll('a[href]');
-                        for (const a of anchors) {
-                            links.push(a.href);
-                        }
-                        return links;
+                        const links = new Set();
+
+                        // 1. Regular anchor tags
+                        document.querySelectorAll('a[href]').forEach(a => {
+                            links.add(a.href);
+                        });
+
+                        // 2. Buttons with data-href or onclick with URLs
+                        document.querySelectorAll('button, [role="button"]').forEach(btn => {
+                            // Check data attributes
+                            const dataHref = btn.getAttribute('data-href') ||
+                                           btn.getAttribute('data-url') ||
+                                           btn.getAttribute('data-link');
+                            if (dataHref) links.add(dataHref);
+
+                            // Check onclick for URLs
+                            const onclick = btn.getAttribute('onclick');
+                            if (onclick) {
+                                const urlMatch = onclick.match(/(?:window\\.location|href)\\s*=\\s*['"]([^'"]+)['"]/);
+                                if (urlMatch) links.add(urlMatch[1]);
+                            }
+                        });
+
+                        // 3. Navigation items (common in SPAs)
+                        document.querySelectorAll('[class*="nav"] a, [class*="menu"] a, [class*="link"] a').forEach(a => {
+                            if (a.href) links.add(a.href);
+                        });
+
+                        // 4. Check for SPA route links
+                        document.querySelectorAll('[routerLink], [to], [href^="#/"]').forEach(el => {
+                            const route = el.getAttribute('routerLink') ||
+                                        el.getAttribute('to') ||
+                                        el.getAttribute('href');
+                            if (route && !route.startsWith('#')) {
+                                // Convert relative route to absolute URL
+                                const url = new URL(route, window.location.href);
+                                links.add(url.href);
+                            }
+                        });
+
+                        // 5. Meta refresh and canonical links
+                        const canonical = document.querySelector('link[rel="canonical"]');
+                        if (canonical) links.add(canonical.href);
+
+                        return Array.from(links);
                     }
                 """)
 
+                logger.info(f"      ├─ Raw links found: {len(hrefs)}")
+
                 for href in hrefs:
+                    all_found_links.append(href)
                     normalized = self._normalize_url(href)
-                    if normalized and self._should_crawl(normalized):
-                        links.append(normalized)
+                    if not normalized:
+                        filtered_out.append(f"{href} (invalid URL)")
+                        continue
+
+                    if not self._should_crawl(normalized):
+                        # Log why it was filtered
+                        parsed = urlparse(normalized)
+                        if parsed.netloc != self._base_domain:
+                            filtered_out.append(f"{normalized} (external)")
+                        else:
+                            filtered_out.append(f"{normalized} (filtered)")
+                        continue
+
+                    links.append(normalized)
+
+                # Log filtering results
+                if len(links) > 0:
+                    logger.info(f"      ├─ Valid links: {len(links)}")
+                    for link in links[:5]:  # Show first 5
+                        logger.info(f"      │  • {link}")
+                    if len(links) > 5:
+                        logger.info(f"      │  ... and {len(links) - 5} more")
+                else:
+                    logger.warning(f"      ├─ ⚠️  No valid links found!")
+                    if len(filtered_out) > 0:
+                        logger.warning(f"      ├─ Filtered out {len(filtered_out)} links:")
+                        for filtered in filtered_out[:5]:
+                            logger.warning(f"      │  • {filtered}")
 
         except Exception as e:
-            logger.debug(f"Error extracting links from {url}: {e}")
+            logger.error(f"      ├─ ❌ Error extracting links: {e}")
 
         return list(set(links))  # Remove duplicates
 
     def _normalize_url(self, url: str) -> Optional[str]:
         """Normalize a URL for comparison."""
         try:
+            # Handle relative URLs
+            if url.startswith('/'):
+                base_parsed = urlparse(f"https://{self._base_domain}")
+                url = urljoin(f"{base_parsed.scheme}://{base_parsed.netloc}", url)
+
             parsed = urlparse(url)
 
             # Skip non-http(s) URLs
             if parsed.scheme not in ('http', 'https'):
                 return None
 
-            # Remove fragment
+            # Skip empty or just-fragment URLs
+            if not parsed.netloc or (not parsed.path and not parsed.query):
+                return None
+
+            # Skip mailto, tel, javascript, etc
+            if parsed.scheme in ('mailto', 'tel', 'javascript'):
+                return None
+
+            # Remove fragment and trailing slash
+            path = parsed.path.rstrip('/') if parsed.path != '/' else '/'
+
             normalized = urlunparse((
                 parsed.scheme,
                 parsed.netloc.lower(),
-                parsed.path.rstrip('/') or '/',
+                path,
                 '',  # params
                 parsed.query,
                 ''  # fragment
@@ -181,7 +341,8 @@ class SiteCrawler:
 
             return normalized
 
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Failed to normalize URL {url}: {e}")
             return None
 
     def _should_crawl(self, url: str) -> bool:
@@ -205,13 +366,17 @@ class SiteCrawler:
         if any(path_lower.endswith(ext) for ext in skip_extensions):
             return False
 
-        # Skip common non-content paths
+        # Skip common non-content paths (made less restrictive)
         skip_paths = (
-            '/wp-admin', '/admin', '/login', '/logout', '/signup', '/register',
-            '/cart', '/checkout', '/account', '/api/', '/feed', '/rss'
+            '/wp-admin/', '/wp-login', '/admin/login',
+            '/api/', '/feed/', '/rss/', '/_next/', '/static/'
         )
         if any(path_lower.startswith(skip) for skip in skip_paths):
             return False
+
+        # Skip anchor-only links (same page navigation)
+        if parsed.path == '/' and parsed.query == '' and not parsed.fragment:
+            return True
 
         return True
 
@@ -249,7 +414,9 @@ class SiteCrawler:
                         if path:
                             self._disallowed_paths.add(path)
 
-                logger.debug(f"Loaded {len(self._disallowed_paths)} disallowed paths from robots.txt")
+                if len(self._disallowed_paths) > 0:
+                    logger.info(f"ℹ️  Loaded {len(self._disallowed_paths)} disallowed paths from robots.txt")
 
         except Exception as e:
-            logger.debug(f"Could not fetch robots.txt: {e}")
+            # Silently handle robots.txt fetch errors
+            pass

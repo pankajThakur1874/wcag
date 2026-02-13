@@ -111,6 +111,9 @@ export interface Scan {
 export interface QuickScanRequest {
   url: string;
   scanners?: string[];
+  siteWide?: boolean;
+  maxPages?: number;
+  maxDepth?: number;
 }
 
 export interface ProjectScanRequest {

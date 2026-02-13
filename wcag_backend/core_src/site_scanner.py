@@ -136,10 +136,15 @@ class SiteScanner:
         """
         self._progress_callback = callback
 
-    def _report_progress(self, phase: str, current: int, total: int, message: str):
+    async def _report_progress(self, phase: str, current: int, total: int, message: str):
         """Report progress to callback if set."""
         if self._progress_callback:
-            self._progress_callback(phase, current, total, message)
+            # Check if callback is async
+            import asyncio
+            import inspect
+            result = self._progress_callback(phase, current, total, message)
+            if inspect.iscoroutine(result):
+                await result
         logger.info(f"[{phase}] {current}/{total}: {message}")
 
     async def scan_site(self, start_url: str) -> SiteScanResult:
@@ -165,7 +170,13 @@ class SiteScanner:
             await self._browser_manager.start()
 
             # Phase 1: Crawl the website
-            self._report_progress("crawling", 0, self.max_pages, "Starting crawl...")
+            logger.info("=" * 80)
+            logger.info(f"🌐 SITE SCAN STARTED: {start_url}")
+            logger.info(f"📊 Configuration: Max {self.max_pages} pages, Depth {self.max_depth}")
+            logger.info(f"🔧 Scanners: {', '.join(self.tools or ['default'])}")
+            logger.info("=" * 80)
+
+            await self._report_progress("crawling", 0, self.max_pages, "Starting crawl...")
 
             crawler = SiteCrawler(
                 max_pages=self.max_pages,
@@ -173,15 +184,18 @@ class SiteScanner:
                 browser_manager=self._browser_manager
             )
 
-            def on_page_found(url: str, total: int):
-                self._report_progress("crawling", total, self.max_pages, f"Found: {url}")
+            async def on_page_found(url: str, total: int):
+                logger.info(f"🔍 Discovered ({total}/{self.max_pages}): {url}")
+                await self._report_progress("crawling", total, self.max_pages, f"Found: {url}")
 
             crawler.set_progress_callback(on_page_found)
 
             crawl_result = await crawler.crawl(start_url)
             result.pages_discovered = len(crawl_result.pages_found)
 
-            logger.info(f"Crawl complete: found {len(crawl_result.pages_found)} pages")
+            logger.info("-" * 80)
+            logger.info(f"✅ Crawl Complete: Found {len(crawl_result.pages_found)} pages to scan")
+            logger.info("-" * 80)
 
             if not crawl_result.pages_found:
                 result.status = ScanStatus.FAILED
@@ -189,7 +203,10 @@ class SiteScanner:
                 return result
 
             # Phase 2: Scan each page
-            self._report_progress("scanning", 0, len(crawl_result.pages_found), "Starting scans...")
+            logger.info("")
+            logger.info("🔬 SCANNING PHASE STARTED")
+            logger.info("")
+            await self._report_progress("scanning", 0, len(crawl_result.pages_found), "Starting scans...")
 
             all_violations = []
             page_index = 0
@@ -209,7 +226,8 @@ class SiteScanner:
                     url = batch[j]
 
                     if isinstance(page_result, Exception):
-                        logger.error(f"Page scan failed {url}: {page_result}")
+                        logger.error(f"❌ Page {page_index}/{len(crawl_result.pages_found)}: FAILED - {url}")
+                        logger.error(f"   Error: {page_result}")
                         result.page_results.append(PageResult(
                             url=url,
                             score=0,
@@ -240,7 +258,14 @@ class SiteScanner:
                         result.total_rules_passed += scan_result.scores.total_rules_passed
                         result.total_rules_failed += scan_result.scores.total_rules_failed
 
-                    self._report_progress(
+                        logger.info(
+                            f"✅ Page {page_index}/{len(crawl_result.pages_found)}: "
+                            f"Score {scan_result.scores.overall}% | "
+                            f"{scan_result.summary.total_violations} issues | "
+                            f"{url}"
+                        )
+
+                    await self._report_progress(
                         "scanning",
                         page_index,
                         len(crawl_result.pages_found),
@@ -263,11 +288,14 @@ class SiteScanner:
             result.status = ScanStatus.COMPLETED
             result.duration_seconds = round(time.time() - start_time, 2)
 
-            logger.info(
-                f"Site scan complete: {result.pages_scanned} pages, "
-                f"{len(result.unique_violations)} unique violations, "
-                f"score: {result.overall_score}%"
-            )
+            logger.info("")
+            logger.info("=" * 80)
+            logger.info("🎉 SITE SCAN COMPLETE")
+            logger.info(f"📊 Pages Scanned: {result.pages_scanned}/{result.pages_discovered}")
+            logger.info(f"📋 Unique Issues: {len(result.unique_violations)}")
+            logger.info(f"📈 Overall Score: {result.overall_score}%")
+            logger.info(f"⏱️  Duration: {result.duration_seconds}s")
+            logger.info("=" * 80)
 
             return result
 

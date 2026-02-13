@@ -23,10 +23,28 @@ export default function SettingsPage() {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
+    // Scan preferences
+    const [scanSiteWide, setScanSiteWide] = useState(true);
+    const [scanMaxPages, setScanMaxPages] = useState(10);
+    const [scanMaxDepth, setScanMaxDepth] = useState(3);
+
     useEffect(() => {
         if (user) {
             setName(user.name);
             setEmail(user.email);
+        }
+
+        // Load scan preferences from localStorage
+        const savedScanPrefs = localStorage.getItem('scanPreferences');
+        if (savedScanPrefs) {
+            try {
+                const prefs = JSON.parse(savedScanPrefs);
+                setScanSiteWide(prefs.siteWide ?? true);
+                setScanMaxPages(prefs.maxPages ?? 10);
+                setScanMaxDepth(prefs.maxDepth ?? 3);
+            } catch (e) {
+                console.error('Failed to parse scan preferences:', e);
+            }
         }
     }, [user]);
 
@@ -73,6 +91,16 @@ export default function SettingsPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSaveScanPreferences = () => {
+        const prefs = {
+            siteWide: scanSiteWide,
+            maxPages: scanMaxPages,
+            maxDepth: scanMaxDepth
+        };
+        localStorage.setItem('scanPreferences', JSON.stringify(prefs));
+        toast.success('Scan preferences saved!');
     };
 
     const handleDeleteAccount = async () => {
@@ -399,6 +427,114 @@ export default function SettingsPage() {
                                     <option value="dark">Dark (Coming Soon)</option>
                                     <option value="auto">Auto (Coming Soon)</option>
                                 </select>
+                            </div>
+
+                            {/* Scan Defaults */}
+                            <div style={{ marginBottom: '2rem', padding: '1.5rem', background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>Default Scan Configuration</h3>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                    Configure how scans should run when using "Scan Now" button on project cards
+                                </p>
+
+                                {/* Scan Type */}
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 500, fontSize: '0.9rem' }}>
+                                        Scan Type
+                                    </label>
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                            <input
+                                                type="radio"
+                                                checked={!scanSiteWide}
+                                                onChange={() => setScanSiteWide(false)}
+                                                style={{ cursor: 'pointer' }}
+                                            />
+                                            <div>
+                                                <div style={{ fontWeight: 500 }}>Single Page</div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                    Scan only the main URL (faster)
+                                                </div>
+                                            </div>
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                            <input
+                                                type="radio"
+                                                checked={scanSiteWide}
+                                                onChange={() => setScanSiteWide(true)}
+                                                style={{ cursor: 'pointer' }}
+                                            />
+                                            <div>
+                                                <div style={{ fontWeight: 500 }}>Site-wide</div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                    Crawl multiple pages (comprehensive)
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Site-wide Options */}
+                                {scanSiteWide && (
+                                    <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border-light)' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>
+                                                    Max Pages
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="100"
+                                                    value={scanMaxPages}
+                                                    onChange={(e) => setScanMaxPages(parseInt(e.target.value) || 10)}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '0.75rem',
+                                                        border: '1px solid var(--border-light)',
+                                                        borderRadius: 'var(--radius-md)',
+                                                        fontFamily: 'inherit',
+                                                        fontSize: '0.95rem'
+                                                    }}
+                                                />
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                    Maximum number of pages to scan (1-100)
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>
+                                                    Max Depth
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="10"
+                                                    value={scanMaxDepth}
+                                                    onChange={(e) => setScanMaxDepth(parseInt(e.target.value) || 3)}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '0.75rem',
+                                                        border: '1px solid var(--border-light)',
+                                                        borderRadius: 'var(--radius-md)',
+                                                        fontFamily: 'inherit',
+                                                        fontSize: '0.95rem'
+                                                    }}
+                                                />
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                    Crawl depth level (1-10)
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Save Button */}
+                                <button
+                                    onClick={handleSaveScanPreferences}
+                                    className="btn-gradient"
+                                    style={{ marginTop: '1.5rem', padding: '0.75rem 2rem', fontSize: '0.9rem' }}
+                                >
+                                    Save Scan Preferences
+                                </button>
                             </div>
 
                             <button

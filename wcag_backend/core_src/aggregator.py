@@ -38,7 +38,7 @@ class ResultsAggregator:
             tools: List of tool names to run. Defaults to config setting.
         """
         config = get_config()
-        self.tools = tools or config.scan.tools
+        self.tools = tools or config.scanning.default_scanners
         self._browser_manager: Optional[BrowserManager] = None
 
     async def scan(self, url: str) -> ScanResult:
@@ -74,9 +74,12 @@ class ResultsAggregator:
             tasks = []
             scanner_names = []
 
+            logger.info(f"📄 Scanning URL: {url}")
+            logger.info(f"🔧 Running {len(self.tools)} scanners: {', '.join(self.tools)}")
+
             for tool_name in self.tools:
                 if tool_name not in SCANNERS:
-                    logger.warning(f"Unknown scanner: {tool_name}, skipping")
+                    logger.warning(f"⚠️  Unknown scanner: {tool_name}, skipping")
                     continue
 
                 scanner_class = SCANNERS[tool_name]
@@ -92,6 +95,7 @@ class ResultsAggregator:
                 else:
                     scanner = scanner_class()
 
+                logger.info(f"  ▶️  Starting: {tool_name}")
                 tasks.append(scanner.run(url))
                 scanner_names.append(tool_name)
 
@@ -101,7 +105,7 @@ class ResultsAggregator:
 
                 for i, (tool_name, task_result) in enumerate(zip(scanner_names, results)):
                     if isinstance(task_result, Exception):
-                        logger.error(f"Scanner {tool_name} failed: {task_result}")
+                        logger.error(f"  ❌ {tool_name}: FAILED - {task_result}")
                         tool_statuses[tool_name] = ToolStatus(
                             name=tool_name,
                             status="error",
@@ -111,6 +115,7 @@ class ResultsAggregator:
                         violations, status = task_result
                         all_violations.extend(violations)
                         tool_statuses[tool_name] = status
+                        logger.info(f"  ✅ {tool_name}: Found {len(violations)} issues (Score: {status.score}%)")
 
                         # Capture scores from specific scanners
                         if tool_name == "lighthouse" and hasattr(SCANNERS[tool_name], "score"):
@@ -166,9 +171,9 @@ class ResultsAggregator:
                         result.scores.seo = score
 
             logger.info(
-                f"Scan completed: {len(deduplicated)} violations found, "
-                f"{total_rules_passed}/{total_rules_checked} rules passed "
-                f"(score: {result.scores.overall}%)"
+                f"✨ Page Complete: {len(deduplicated)} unique violations | "
+                f"{total_rules_passed}/{total_rules_checked} rules passed | "
+                f"Score: {result.scores.overall}%"
             )
 
             return result

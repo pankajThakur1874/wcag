@@ -171,11 +171,11 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    """Log all HTTP requests."""
+    """Log HTTP requests (only for errors and slow requests)."""
 
     async def dispatch(self, request: Request, call_next):
         """
-        Log request details.
+        Log request details for errors and slow requests only.
 
         Args:
             request: HTTP request
@@ -186,26 +186,23 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         """
         start_time = time.time()
 
-        # Log request
-        logger.info(f"{request.method} {request.url.path}", extra={
-            "method": request.method,
-            "path": request.url.path,
-            "client": request.client.host if request.client else None
-        })
-
         # Process request
         response = await call_next(request)
 
         # Calculate duration
         duration_ms = int((time.time() - start_time) * 1000)
 
-        # Log response
-        logger.info(f"{request.method} {request.url.path} - {response.status_code}", extra={
-            "method": request.method,
-            "path": request.url.path,
-            "status_code": response.status_code,
-            "duration_ms": duration_ms
-        })
+        # Only log errors or slow requests (>2 seconds)
+        if response.status_code >= 400 or duration_ms > 2000:
+            logger.warning(
+                f"{request.method} {request.url.path} - {response.status_code} ({duration_ms}ms)",
+                extra={
+                    "method": request.method,
+                    "path": request.url.path,
+                    "status_code": response.status_code,
+                    "duration_ms": duration_ms
+                }
+            )
 
         return response
 

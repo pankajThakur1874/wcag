@@ -230,7 +230,7 @@ class BrowserManager:
                         await page.goto(
                             url,
                             wait_until=wait_strategy,
-                            timeout=self._config.browser.timeout
+                            timeout=self._config.scanning.timeout * 1000  # Convert seconds to milliseconds
                         )
 
                         # Wait for dynamic content

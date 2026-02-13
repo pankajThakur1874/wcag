@@ -289,10 +289,27 @@ export default function ProjectsPage() {
 
         setScanning(true);
         try {
-            const response = await api.startProjectScan({
+            // Load scan preferences from localStorage
+            let scanConfig: any = {
                 projectId: selectedProject,
                 scanners: selectedScanners
-            });
+            };
+
+            const savedPrefs = localStorage.getItem('scanPreferences');
+            if (savedPrefs) {
+                try {
+                    const prefs = JSON.parse(savedPrefs);
+                    // Only add maxPages and maxDepth if site-wide is enabled
+                    if (prefs.siteWide) {
+                        scanConfig.maxPages = prefs.maxPages || 10;
+                        scanConfig.maxDepth = prefs.maxDepth || 3;
+                    }
+                } catch (e) {
+                    console.error('Failed to parse scan preferences:', e);
+                }
+            }
+
+            const response = await api.startProjectScan(scanConfig);
             setShowScannerModal(false);
             toast.success('Scan started successfully!');
             router.push(`/scan?scanId=${response.data.scanId}`);
@@ -558,6 +575,38 @@ export default function ProjectsPage() {
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
                             {selectedScanners.length} scanner{selectedScanners.length !== 1 ? 's' : ''} selected
                         </p>
+
+                        {/* Scan Configuration Info */}
+                        {(() => {
+                            const savedPrefs = localStorage.getItem('scanPreferences');
+                            let scanType = 'Site-wide (default)';
+                            let details = 'Max 10 pages, depth 3';
+
+                            if (savedPrefs) {
+                                try {
+                                    const prefs = JSON.parse(savedPrefs);
+                                    if (prefs.siteWide) {
+                                        scanType = 'Site-wide';
+                                        details = `Max ${prefs.maxPages || 10} pages, depth ${prefs.maxDepth || 3}`;
+                                    } else {
+                                        scanType = 'Single page';
+                                        details = 'Main URL only';
+                                    }
+                                } catch (e) {}
+                            }
+
+                            return (
+                                <div style={{ background: '#f0f9ff', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', border: '1px solid #bae6fd' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                                        <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#0369a1' }}>⚙️ Scan Configuration:</span>
+                                        <span style={{ fontSize: '0.9rem', color: '#0369a1' }}>{scanType}</span>
+                                    </div>
+                                    <p style={{ fontSize: '0.8rem', color: '#0c4a6e', margin: 0 }}>
+                                        {details} • <a href="/settings" style={{ color: '#0369a1', textDecoration: 'underline' }}>Change in Settings</a>
+                                    </p>
+                                </div>
+                            );
+                        })()}
 
                         {/* Actions */}
                         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>

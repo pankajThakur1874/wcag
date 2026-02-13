@@ -15,5 +15,6 @@ if __name__ == "__main__":
         host=config.server.host,
         port=config.server.port,
         reload=config.server.reload,
-        log_level=config.logging.level.lower()
+        log_level=config.logging.level.lower(),
+        access_log=False  # Disable uvicorn access logs (we use middleware for errors only)
     )

@@ -38,13 +38,14 @@ class Pa11yScanner(BaseScanner):
             return []
 
         try:
-            # Run pa11y command
+            # Run pa11y command in headless mode
             process = await asyncio.create_subprocess_exec(
                 self._pa11y_path,
                 url,
                 "--reporter", "json",
                 "--standard", "WCAG2AA",
                 "--timeout", "60000",
+                "--chromium-args", "--no-sandbox --disable-setuid-sandbox --headless --disable-gpu",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
