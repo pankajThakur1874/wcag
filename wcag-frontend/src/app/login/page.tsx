@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 
 export default function LoginPage() {
-    const router = useRouter();
+    const { login, register } = useAuth();
     const [isRegister, setIsRegister] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -14,14 +14,22 @@ export default function LoginPage() {
         setError('');
         setLoading(true);
 
-        // Simulate auth delay
-        await new Promise(r => setTimeout(r, 1000));
-        setLoading(false);
-        router.push('/');
-    };
+        try {
+            const formData = new FormData(e.target as HTMLFormElement);
+            const email = formData.get('email') as string;
+            const password = formData.get('password') as string;
 
-    const bypassAuth = () => {
-        router.push('/');
+            if (isRegister) {
+                const name = formData.get('name') as string;
+                await register({ name, email, password });
+            } else {
+                await login({ email, password });
+            }
+        } catch (err: any) {
+            setError(err.message || 'Authentication failed');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -49,17 +57,17 @@ export default function LoginPage() {
                         <form onSubmit={handleSubmit}>
                             <input
                                 type="email"
+                                name="email"
                                 className="auth-input"
                                 placeholder="Email Address"
                                 required
-                                defaultValue="demo@example.com"
                             />
                             <input
                                 type="password"
+                                name="password"
                                 className="auth-input"
                                 placeholder="Password"
                                 required
-                                defaultValue="password123"
                             />
                             <button
                                 type="submit"
@@ -82,36 +90,31 @@ export default function LoginPage() {
                             {error && (
                                 <p style={{ color: 'red', textAlign: 'center', fontSize: '0.8rem', marginTop: '0.5rem' }}>{error}</p>
                             )}
-                            <p style={{ textAlign: 'center', marginTop: '1rem' }}>
-                                <a
-                                    href="#"
-                                    style={{ color: '#94a3b8', fontSize: '0.8rem' }}
-                                    onClick={(e) => { e.preventDefault(); bypassAuth(); }}
-                                >
-                                    [Dev: Skip Auth]
-                                </a>
-                            </p>
                         </form>
                     ) : (
                         /* Register Form */
                         <form onSubmit={handleSubmit}>
                             <input
                                 type="text"
+                                name="name"
                                 className="auth-input"
                                 placeholder="Full Name"
                                 required
                             />
                             <input
                                 type="email"
+                                name="email"
                                 className="auth-input"
                                 placeholder="Email Address"
                                 required
                             />
                             <input
                                 type="password"
+                                name="password"
                                 className="auth-input"
                                 placeholder="Password"
                                 required
+                                minLength={6}
                             />
                             <button
                                 type="submit"
@@ -131,6 +134,9 @@ export default function LoginPage() {
                                     Sign In
                                 </a>
                             </p>
+                            {error && (
+                                <p style={{ color: 'red', textAlign: 'center', fontSize: '0.8rem', marginTop: '0.5rem' }}>{error}</p>
+                            )}
                         </form>
                     )}
                 </div>

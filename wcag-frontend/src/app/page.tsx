@@ -1,11 +1,43 @@
-import { MockAPI } from "@/lib/mock-data";
+'use client';
 
-export default async function Dashboard() {
-  const stats = await MockAPI.getStats();
-  const scans = await MockAPI.getScans();
+import { useEffect, useState } from 'react';
+import { api } from '@/lib/api';
+import type { DashboardStats, DashboardPage } from '@/lib/types';
 
-  const score = stats.avgScore;
+export default function Dashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [pages, setPages] = useState<DashboardPage[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [statsRes, pagesRes] = await Promise.all([
+          api.getDashboardStats(),
+          api.getDashboardPages({ limit: 10 })
+        ]);
+        setStats(statsRes.data);
+        setPages(pagesRes.data.items);
+      } catch (error) {
+        console.error('Failed to load dashboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  if (loading || !stats) {
+    return <div>Loading...</div>;
+  }
+
+  const score = Math.round(stats.avgScore);
   const dashOffset = 440 - (440 * score) / 100;
+
+  // Calculate bar widths based on total issues
+  const totalIssues = stats.totalIssues || 1; // Prevent division by zero
+  const getBarPercentage = (count: number) => Math.round((count / totalIssues) * 100);
 
   return (
     <>
@@ -18,8 +50,8 @@ export default async function Dashboard() {
       <div className="stats-grid">
         <div className="card stat-card">
           <div className="stat-top-bar" style={{ background: 'var(--primary-gradient)' }} />
-          <div className="stat-value">{stats.totalScans}</div>
-          <div className="stat-label">Total Scans</div>
+          <div className="stat-value">{stats.completedScans}</div>
+          <div className="stat-label">Completed Scans</div>
         </div>
         <div className="card stat-card">
           <div className="stat-top-bar" style={{ background: 'var(--grad-info)' }} />
@@ -33,7 +65,7 @@ export default async function Dashboard() {
         </div>
         <div className="card stat-card">
           <div className="stat-top-bar" style={{ background: 'var(--grad-success)' }} />
-          <div className="stat-value">{score}%</div>
+          <div className="stat-value">{Math.round(stats.avgScore)}%</div>
           <div className="stat-label">Average Score</div>
         </div>
       </div>
@@ -66,13 +98,13 @@ export default async function Dashboard() {
           <h3 style={{ marginBottom: '1rem' }}>Issues by Impact</h3>
           <div className="bar-chart">
             {[
-              { label: 'Critical', value: 35, color: 'var(--grad-danger)' },
-              { label: 'Serious', value: 55, color: 'linear-gradient(135deg, var(--accent-orange), #ea580c)' },
-              { label: 'Moderate', value: 70, color: 'var(--grad-warning)' },
-              { label: 'Minor', value: 25, color: 'var(--grad-success)' },
+              { label: 'Critical', value: getBarPercentage(stats.issuesByImpact.critical), count: stats.issuesByImpact.critical, color: 'var(--grad-danger)' },
+              { label: 'Serious', value: getBarPercentage(stats.issuesByImpact.serious), count: stats.issuesByImpact.serious, color: 'linear-gradient(135deg, var(--accent-orange), #ea580c)' },
+              { label: 'Moderate', value: getBarPercentage(stats.issuesByImpact.moderate), count: stats.issuesByImpact.moderate, color: 'var(--grad-warning)' },
+              { label: 'Minor', value: getBarPercentage(stats.issuesByImpact.minor), count: stats.issuesByImpact.minor, color: 'var(--grad-success)' },
             ].map((bar) => (
               <div key={bar.label} className="bar-row">
-                <span className="bar-label">{bar.label}</span>
+                <span className="bar-label">{bar.label} ({bar.count})</span>
                 <div className="bar-track">
                   <div className="bar-fill" style={{ width: `${bar.value}%`, background: bar.color }} />
                 </div>
@@ -84,7 +116,7 @@ export default async function Dashboard() {
 
       {/* All Scanned Pages Table */}
       <div className="card">
-        <h3 style={{ marginBottom: '1rem' }}>All Scanned Pages</h3>
+        <h3 style={{ marginBottom: '1rem' }}>Recently Scanned Pages</h3>
         <div className="table-container">
           <table>
             <thead>
@@ -98,20 +130,28 @@ export default async function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {scans.map((scan) => (
-                <tr key={scan.id}>
-                  <td>{scan.url}</td>
-                  <td>{scan.projectName || 'Quick Scan'}</td>
-                  <td>{scan.score ? `${scan.score}%` : '—'}</td>
-                  <td>{scan.issuesCount || 0}</td>
-                  <td>{new Date(scan.createdAt).toLocaleDateString()}</td>
-                  <td>
-                    <span className={`status-pill ${scan.status === 'completed' ? 'status-success' : scan.status === 'failed' ? 'status-danger' : 'status-warning'}`}>
-                      {scan.status}
-                    </span>
+              {pages.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                    No scans yet. Start your first scan from the Scan page.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                pages.map((page) => (
+                  <tr key={page.scanId}>
+                    <td>{page.url}</td>
+                    <td>{page.projectName || 'Quick Scan'}</td>
+                    <td>{page.score}%</td>
+                    <td>{page.issuesCount}</td>
+                    <td>{new Date(page.lastScanned).toLocaleDateString()}</td>
+                    <td>
+                      <span className={`status-pill ${page.status === 'completed' ? 'status-success' : page.status === 'failed' ? 'status-danger' : 'status-warning'}`}>
+                        {page.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
