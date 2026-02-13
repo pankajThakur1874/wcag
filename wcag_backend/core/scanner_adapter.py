@@ -174,13 +174,26 @@ class ScannerAdapter:
         # Get first instance for HTML snippet and selector
         instance = src_violation.instances[0] if src_violation.instances else None
 
+        # Prefer help_text, fallback to instance fix_suggestion
+        how_to_fix = src_violation.help_text
+        if not how_to_fix and instance and instance.fix_suggestion:
+            how_to_fix = instance.fix_suggestion
+
+        # Build selector list (show multiple if available)
+        selectors = []
+        for inst in src_violation.instances[:5]:  # Limit to first 5 instances
+            if inst.selector and inst.selector not in selectors:
+                selectors.append(inst.selector)
+
+        selector_str = ", ".join(selectors) if selectors else (instance.selector if instance else None)
+
         return {
             "description": src_violation.description,
             "impact": impact_map.get(src_violation.impact.value, "moderate"),
             "wcag_criteria": src_violation.wcag_criteria[0] if src_violation.wcag_criteria else None,
             "wcag_level": wcag_level_map.get(src_violation.wcag_level.value) if src_violation.wcag_level else None,
-            "selector": instance.selector if instance else None,
-            "html_snippet": instance.html[:500] if instance else None,  # Limit to 500 chars
-            "how_to_fix": src_violation.help_text,
+            "selector": selector_str,
+            "html_snippet": instance.html[:500] if instance and instance.html else None,
+            "how_to_fix": how_to_fix,
             "help_url": src_violation.help_url
         }
