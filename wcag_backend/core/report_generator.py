@@ -63,7 +63,7 @@ class ReportGenerator:
         .issue.minor { border-left-color: #10b981; }
         .issue-title { font-weight: bold; color: #1f2937; }
         .issue-details { color: #6b7280; margin-top: 5px; font-size: 0.9rem; }
-        .code { background: #1f2937; color: #f3f4f6; padding: 10px; border-radius: 4px; overflow-x: auto; margin-top: 10px; font-family: monospace; font-size: 0.85rem; }
+        .code { background: #1f2937; color: #f3f4f6; padding: 15px; border-radius: 6px; overflow-x: auto; overflow-y: auto; max-height: 500px; margin-top: 10px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; word-wrap: break-word; }
         .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-right: 5px; }
         .badge.critical { background: #fee2e2; color: #991b1b; }
         .badge.serious { background: #ffedd5; color: #9a3412; }
@@ -115,7 +115,7 @@ class ReportGenerator:
                 {% if issue.wcagCriteria %}<span class="badge">WCAG {{ issue.wcagCriteria }}</span>{% endif %}
                 {% if issue.selector %}<strong>Selector:</strong> {{ issue.selector }}{% endif %}
             </div>
-            {% if issue.howToFix %}<p>{{ issue.howToFix }}</p>{% endif %}
+            {% if issue.howToFix %}<p><strong>How to Fix:</strong> {{ issue.howToFix }}</p>{% else %}<p><em>No fix suggestion available. Please consult WCAG guidelines.</em></p>{% endif %}
             {% if issue.htmlSnippet %}<div class="code">{{ issue.htmlSnippet }}</div>{% endif %}
         </div>
         {% endfor %}
@@ -131,7 +131,8 @@ class ReportGenerator:
                 {% if issue.wcagCriteria %}<span class="badge">WCAG {{ issue.wcagCriteria }}</span>{% endif %}
                 {% if issue.selector %}<strong>Selector:</strong> {{ issue.selector }}{% endif %}
             </div>
-            {% if issue.howToFix %}<p>{{ issue.howToFix }}</p>{% endif %}
+            {% if issue.howToFix %}<p><strong>How to Fix:</strong> {{ issue.howToFix }}</p>{% else %}<p><em>No fix suggestion available. Please consult WCAG guidelines.</em></p>{% endif %}
+            {% if issue.htmlSnippet %}<div class="code">{{ issue.htmlSnippet }}</div>{% endif %}
         </div>
         {% endfor %}
         {% endif %}
@@ -144,9 +145,34 @@ class ReportGenerator:
             <div class="issue-details">
                 <span class="badge moderate">MODERATE</span>
                 {% if issue.wcagCriteria %}<span class="badge">WCAG {{ issue.wcagCriteria }}</span>{% endif %}
+                {% if issue.selector %}<strong>Selector:</strong> {{ issue.selector }}{% endif %}
             </div>
+            {% if issue.howToFix %}<p><strong>How to Fix:</strong> {{ issue.howToFix }}</p>{% endif %}
+            {% if issue.htmlSnippet %}<div class="code">{{ issue.htmlSnippet }}</div>{% endif %}
         </div>
         {% endfor %}
+        {% endif %}
+
+        {% if issues_by_impact.minor %}
+        <h2>Minor Issues ({{ issues_by_impact.minor|length }})</h2>
+        {% for issue in issues_by_impact.minor %}
+        <div class="issue minor">
+            <div class="issue-title">{{ issue.description }}</div>
+            <div class="issue-details">
+                <span class="badge minor">MINOR</span>
+                {% if issue.wcagCriteria %}<span class="badge">WCAG {{ issue.wcagCriteria }}</span>{% endif %}
+                {% if issue.selector %}<strong>Selector:</strong> {{ issue.selector }}{% endif %}
+            </div>
+            {% if issue.howToFix %}<p><strong>How to Fix:</strong> {{ issue.howToFix }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if not issues %}
+        <div style="text-align: center; padding: 40px; color: #10b981;">
+            <h2>🎉 No Accessibility Issues Found!</h2>
+            <p>This page meets all automated WCAG accessibility checks.</p>
+        </div>
         {% endif %}
 
         <p style="margin-top: 30px; color: #666; text-align: center;">

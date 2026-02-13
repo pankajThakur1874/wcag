@@ -193,7 +193,7 @@ class ScannerAdapter:
             "wcag_criteria": src_violation.wcag_criteria[0] if src_violation.wcag_criteria else None,
             "wcag_level": wcag_level_map.get(src_violation.wcag_level.value) if src_violation.wcag_level else None,
             "selector": selector_str,
-            "html_snippet": instance.html[:500] if instance and instance.html else None,
+            "html_snippet": instance.html[:2000] if instance and instance.html else None,  # Increased from 500 to 2000 chars
             "how_to_fix": how_to_fix,
             "help_url": src_violation.help_url
         }
