@@ -14,7 +14,7 @@ class QuickScanRequest(BaseModel):
     siteWide: bool = Field(False, alias="siteWide")
     maxPages: int = Field(10, ge=1, le=100, alias="maxPages")
     maxDepth: int = Field(3, ge=1, le=10, alias="maxDepth")
-    scanners: List[str] = Field(default_factory=lambda: ["axe-core"])
+    scanners: List[str] = Field(default_factory=lambda: ["axe", "pa11y", "html_validator"])
 
     model_config = {"populate_by_name": True}
 
@@ -25,7 +25,7 @@ class ProjectScanRequest(BaseModel):
     projectId: str = Field(..., alias="projectId")
     maxPages: int = Field(50, ge=1, le=100, alias="maxPages")
     maxDepth: int = Field(5, ge=1, le=10, alias="maxDepth")
-    scanners: List[str] = Field(default_factory=lambda: ["axe-core", "html-validator"])
+    scanners: List[str] = Field(default_factory=lambda: ["axe", "pa11y", "html_validator"])
 
     model_config = {"populate_by_name": True}
 
