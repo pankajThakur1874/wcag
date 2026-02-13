@@ -104,7 +104,7 @@ class LighthouseScanner(BaseScanner):
 
             _, stderr = await asyncio.wait_for(
                 process.communicate(),
-                timeout=180
+                timeout=60  # Reduced from 180s to 60s
             )
 
             if process.returncode != 0:

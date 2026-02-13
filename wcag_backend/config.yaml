@@ -34,4 +34,4 @@ scanning:
     - aria
   max_pages: 50
   max_depth: 3
-  timeout: 120
+  timeout: 30  # Reduced from 120s to 30s for faster scans

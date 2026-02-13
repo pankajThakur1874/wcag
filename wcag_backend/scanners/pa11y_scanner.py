@@ -44,7 +44,7 @@ class Pa11yScanner(BaseScanner):
                 url,
                 "--reporter=json",
                 "--standard=WCAG2AA",
-                "--timeout=60000",
+                "--timeout=30000",  # Reduced from 60s to 30s
                 "--chromium-args=--headless=new --no-sandbox --disable-setuid-sandbox --disable-gpu --disable-dev-shm-usage",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
@@ -52,7 +52,7 @@ class Pa11yScanner(BaseScanner):
 
             stdout, stderr = await asyncio.wait_for(
                 process.communicate(),
-                timeout=120
+                timeout=60  # Reduced from 120s to 60s
             )
 
             # Pa11y exits with 2 if issues found, that's normal

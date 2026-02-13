@@ -217,74 +217,48 @@ class BrowserManager:
 
         last_error = None
 
-        # Wait strategies to try in order (from fastest to most complete)
-        wait_strategies = ["load", "domcontentloaded", "networkidle"]
+        # Use fastest wait strategy for better performance
+        wait_strategy = "domcontentloaded"
 
         try:
             for attempt in range(retries + 1):
-                for wait_strategy in wait_strategies:
-                    try:
-                        logger.debug(f"Navigating to {url} (attempt {attempt + 1}, wait: {wait_strategy})")
+                try:
+                    logger.debug(f"Navigating to {url} (attempt {attempt + 1})")
 
-                        # Navigate with longer timeout
-                        await page.goto(
-                            url,
-                            wait_until=wait_strategy,
-                            timeout=self._config.scanning.timeout * 1000  # Convert seconds to milliseconds
-                        )
+                    # Navigate with timeout
+                    await page.goto(
+                        url,
+                        wait_until=wait_strategy,
+                        timeout=30000  # 30 seconds timeout
+                    )
 
-                        # Wait for dynamic content
-                        await asyncio.sleep(3)
+                    # Brief wait for dynamic content
+                    await asyncio.sleep(0.5)
 
-                        # Simulate human-like behavior
-                        try:
-                            # Random scrolling
-                            await page.evaluate("""
-                                window.scrollTo({
-                                    top: Math.random() * 300,
-                                    behavior: 'smooth'
-                                });
-                            """)
-                            await asyncio.sleep(1)
+                    # Try to handle cookie consent popups
+                    await self._handle_cookie_popups(page)
 
-                            # Scroll back up
-                            await page.evaluate("window.scrollTo({ top: 0, behavior: 'smooth' });")
-                            await asyncio.sleep(0.5)
+                    # Brief wait for page to settle
+                    await asyncio.sleep(0.5)
 
-                            # Random mouse movements
-                            await page.mouse.move(100 + int(asyncio.get_event_loop().time() % 100),
-                                                 100 + int(asyncio.get_event_loop().time() % 100))
-                            await asyncio.sleep(0.3)
-                        except Exception as e:
-                            logger.debug(f"Human simulation failed: {e}")
-
-                        # Try to handle cookie consent popups
-                        await self._handle_cookie_popups(page)
-
-                        # Final wait to let any anti-bot checks complete
-                        await asyncio.sleep(2)
-
-                        yield page
-                        return
-                    except PlaywrightError as e:
-                        last_error = e
-                        error_msg = str(e).lower()
-                        # If it's a protocol error or timeout, try next strategy
-                        if "protocol" in error_msg or "timeout" in error_msg or "net::" in error_msg:
-                            logger.warning(f"Navigation failed with {wait_strategy}: {e}")
+                    yield page
+                    return
+                except PlaywrightError as e:
+                    last_error = e
+                    error_msg = str(e).lower()
+                    # If it's a protocol error or timeout, retry
+                    if "protocol" in error_msg or "timeout" in error_msg or "net::" in error_msg:
+                        logger.warning(f"Navigation failed: {e}")
+                        if attempt < retries:
                             # Close and recreate page for fresh connection
                             await page.close()
                             page = await context.new_page()
                             if stealth:
                                 await stealth.apply_stealth_async(page)
+                            await asyncio.sleep(1)  # Brief wait before retry
                             continue
-                        # For other errors, raise immediately
-                        raise
-
-                # If all strategies failed, wait before retry
-                if attempt < retries:
-                    logger.warning(f"All strategies failed, retrying in 3s...")
-                    await asyncio.sleep(3)
+                    # For other errors, raise immediately
+                    raise
 
             # All retries exhausted
             if last_error:
