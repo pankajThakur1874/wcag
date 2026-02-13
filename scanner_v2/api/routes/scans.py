@@ -554,3 +554,204 @@ async def delete_scan(
     await scan_repo.delete(scan_id)
 
     logger.info(f"Scan deleted: {scan_id} by user {current_user.email}")
+
+
+@router.post("/scan", response_model=ScanResponse, status_code=status.HTTP_201_CREATED)
+async def quick_scan(
+    project_repo: Annotated[ProjectRepository, Depends(get_project_repository)],
+    scan_repo: Annotated[ScanRepository, Depends(get_scan_repository)],
+    queue_manager: Annotated[QueueManager, Depends(get_queue_manager)],
+    url: str = Query(..., description="URL to scan"),
+    max_pages: int = Query(1, description="Maximum pages to scan"),
+    scanners: Optional[list[str]] = Query(None, description="Optional list of scanners")
+):
+    """
+    Quick scan endpoint without authentication (or with optional auth).
+    Creates a temporary project for one-time scans.
+
+    Args:
+        url: URL to scan
+        max_pages: Maximum pages to scan (default: 1 for single page)
+        scanners: Optional list of scanners to use
+        project_repo: Project repository
+        scan_repo: Scan repository
+        queue_manager: Queue manager
+
+    Returns:
+        Created scan
+
+    Raises:
+        HTTPException: If URL is invalid
+    """
+    from urllib.parse import urlparse
+
+    # Validate URL
+    try:
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError("Invalid URL")
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid URL format"
+        )
+
+    # Create or get temporary user for quick scans
+    temp_user_email = "quickscan@temp.local"
+    temp_user = await project_repo.user_repo.get_by_email(temp_user_email)
+    if not temp_user:
+        temp_user = await project_repo.user_repo.create(
+            email=temp_user_email,
+            password="quickscan_temp_password",
+            name="Quick Scan User",
+            role="user"
+        )
+
+    # Create temporary project for this scan
+    from scanner_v2.database.models import ProjectSettings
+    project = await project_repo.create(
+        user_id=temp_user.id,
+        name=f"Quick Scan - {url[:50]}",
+        base_url=url,
+        description="Temporary project for quick scan",
+        settings=ProjectSettings(
+            max_pages=max_pages,
+            max_depth=1 if max_pages == 1 else 3
+        )
+    )
+
+    # Create scan config
+    config = ScanConfig(
+        scanners=scanners or ["axe"],
+        max_depth=1 if max_pages == 1 else 2,
+        max_pages=max_pages,
+        screenshot_enabled=True,
+        enable_interactive_crawl=False,  # Disable for quick scans
+        wcag_level=WCAGLevel.AA
+    )
+
+    # Create scan
+    scan = await scan_repo.create(
+        project_id=project.id,
+        scan_type=ScanType.SINGLE_PAGE if max_pages == 1 else ScanType.FULL,
+        config=config
+    )
+
+    # Callback to update scan when job completes
+    async def on_scan_complete(job, result):
+        """Update scan with results when job completes."""
+        from scanner_v2.database.models import ScanSummary, ScanScores, ScanProgress, ImpactSummary, WCAGLevelSummary, PrincipleScores, Issue, IssueStatus
+        from scanner_v2.api.dependencies import get_db_instance
+
+        try:
+            mongodb_instance = get_db_instance()
+            db = mongodb_instance.db
+            issue_repo_local = IssueRepository(db)
+            scan_id = result.get("scan_id")
+            if not scan_id:
+                logger.error(f"No scan_id in job result")
+                return
+
+            status_str = result.get("status", "completed")
+            scan_status = ScanStatus(status_str) if isinstance(status_str, str) else status_str
+            error_message = result.get("error_message")
+
+            await scan_repo.update_status(scan_id, scan_status, error_message)
+
+            if "total_pages" in result:
+                progress = ScanProgress(
+                    total_pages=result.get("total_pages", 0),
+                    pages_crawled=result.get("total_pages", 0),
+                    pages_scanned=result.get("pages_scanned", 0),
+                    current_page=None
+                )
+                await scan_repo.update_progress(scan_id, progress)
+
+            if "summary" in result and "scores" in result:
+                summary_data = result.get("summary", {})
+                scores_data = result.get("scores", {})
+
+                summary = ScanSummary(
+                    total_issues=summary_data.get("total_issues", 0),
+                    by_impact=ImpactSummary(**summary_data.get("by_impact", {})),
+                    by_wcag_level=WCAGLevelSummary(**summary_data.get("by_wcag_level", {}))
+                )
+
+                scores = ScanScores(
+                    overall=scores_data.get("overall", 0.0),
+                    by_principle=PrincipleScores(**scores_data.get("by_principle", {}))
+                )
+
+                await scan_repo.update_results(scan_id, summary, scores)
+
+            if "all_issues" in result:
+                issues_data = result.get("all_issues", [])
+
+                for issue_data in issues_data:
+                    detected_by = issue_data.get("detected_by", [])
+                    if isinstance(detected_by, str):
+                        detected_by = [detected_by]
+                    elif not detected_by:
+                        detected_by = ["unknown"]
+
+                    issue = Issue(
+                        scan_id=scan_id,
+                        page_id=issue_data.get("page_id", ""),
+                        rule_id=issue_data.get("rule_id", ""),
+                        description=issue_data.get("description", ""),
+                        help_text=issue_data.get("help", ""),
+                        help_url=issue_data.get("help_url", ""),
+                        impact=ImpactLevel(issue_data.get("impact", "moderate")),
+                        wcag_criteria=issue_data.get("wcag_criteria", []),
+                        wcag_level=WCAGLevel(issue_data.get("wcag_level", "AA")),
+                        principle=Principle(issue_data.get("principle", "perceivable")),
+                        instances=issue_data.get("instances", []),
+                        detected_by=detected_by,
+                        status=IssueStatus.OPEN
+                    )
+                    await issue_repo_local.create(issue)
+
+            logger.info(f"Updated quick scan {scan_id} with job results")
+        except Exception as e:
+            logger.error(f"Failed to update quick scan from job result: {e}")
+
+    # Enqueue scan job
+    job_id = await queue_manager.enqueue_job(
+        job_type=JobType.SCAN_ORCHESTRATION,
+        payload={
+            "scan_id": scan.id,
+            "project_id": project.id,
+            "base_url": url,
+            "config": {
+                "scan_type": scan.scan_type.value,
+                "scanners": config.scanners,
+                "max_depth": config.max_depth,
+                "max_pages": config.max_pages,
+                "viewport": config.viewport,
+                "wait_time": config.wait_time,
+                "wcag_level": config.wcag_level.value,
+                "screenshot_enabled": config.screenshot_enabled,
+                "enable_interactive_crawl": config.enable_interactive_crawl
+            }
+        },
+        priority=JobPriority.LOW.value,  # Quick scans have lower priority
+        callback=on_scan_complete
+    )
+
+    logger.info(f"Quick scan created: {scan.id} for {url}, job: {job_id}")
+
+    return ScanResponse(
+        id=scan.id,
+        project_id=scan.project_id,
+        scan_type=scan.scan_type,
+        status=scan.status,
+        config=scan.config,
+        progress=scan.progress,
+        summary=scan.summary,
+        scores=scan.scores,
+        started_at=scan.started_at,
+        completed_at=scan.completed_at,
+        error_message=scan.error_message,
+        created_at=scan.created_at,
+        updated_at=scan.updated_at
+    )

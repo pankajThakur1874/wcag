@@ -17,6 +17,16 @@ from src.scanners.touch_target_scanner import TouchTargetScanner
 from src.scanners.readability_scanner import ReadabilityScanner
 from src.scanners.interactive_scanner import InteractiveScanner
 
+# New custom WCAG 2.2 scanners
+from src.scanners.color_only_scanner import ColorOnlyScanner
+from src.scanners.hover_content_scanner import HoverContentScanner
+from src.scanners.multiple_ways_scanner import MultipleWaysScanner
+from src.scanners.pointer_gestures_scanner import PointerGesturesScanner
+from src.scanners.consistent_navigation_scanner import ConsistentNavigationScanner
+from src.scanners.character_shortcuts_scanner import CharacterShortcutsScanner
+from src.scanners.focus_obscured_scanner import FocusObscuredScanner
+from src.scanners.media_accessibility_scanner import MediaAccessibilityScanner
+
 __all__ = [
     "BaseScanner",
     "AxeScanner",
@@ -33,7 +43,16 @@ __all__ = [
     "MediaScanner",
     "TouchTargetScanner",
     "ReadabilityScanner",
-    "InteractiveScanner"
+    "InteractiveScanner",
+    # New custom scanners
+    "ColorOnlyScanner",
+    "HoverContentScanner",
+    "MultipleWaysScanner",
+    "PointerGesturesScanner",
+    "ConsistentNavigationScanner",
+    "CharacterShortcutsScanner",
+    "FocusObscuredScanner",
+    "MediaAccessibilityScanner"
 ]
 
 # Scanner registry - all available scanners
@@ -52,13 +71,28 @@ SCANNERS = {
     "media": MediaScanner,
     "touch_target": TouchTargetScanner,
     "readability": ReadabilityScanner,
-    "interactive": InteractiveScanner
+    "interactive": InteractiveScanner,
+    # New custom WCAG 2.2 scanners
+    "color_only": ColorOnlyScanner,
+    "hover_content": HoverContentScanner,
+    "multiple_ways": MultipleWaysScanner,
+    "pointer_gestures": PointerGesturesScanner,
+    "consistent_navigation": ConsistentNavigationScanner,
+    "character_shortcuts": CharacterShortcutsScanner,
+    "focus_obscured": FocusObscuredScanner,
+    "media_accessibility": MediaAccessibilityScanner
 }
 
 # Default scanners to run (fast and reliable)
 DEFAULT_SCANNERS = [
     "axe", "html_validator", "contrast", "keyboard", "aria", "forms", "seo",
     "link_text", "image_alt", "media", "touch_target", "readability", "interactive"
+]
+
+# Enhanced scanner set with custom WCAG 2.2 scanners
+ENHANCED_SCANNERS = DEFAULT_SCANNERS + [
+    "color_only", "hover_content", "multiple_ways", "pointer_gestures",
+    "consistent_navigation", "character_shortcuts", "focus_obscured", "media_accessibility"
 ]
 
 # All scanners including external tools
