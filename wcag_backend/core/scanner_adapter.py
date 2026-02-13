@@ -9,10 +9,10 @@ import asyncio
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.core.aggregator import ResultsAggregator
-from src.core.site_scanner import SiteScanner
-from src.models.scan_result import ScanResult as SrcScanResult
-from src.models.violation import Violation as SrcViolation
+from wcag_backend.core_src.aggregator import ResultsAggregator
+from wcag_backend.core_src.site_scanner import SiteScanner
+from wcag_backend.models_src.scan_result import ScanResult as SrcScanResult
+from wcag_backend.models_src.violation import Violation as SrcViolation
 
 from wcag_backend.database.models import ImpactLevel, WCAGLevel
 from wcag_backend.utils.logger import get_logger

@@ -5,8 +5,8 @@ from typing import Optional
 from datetime import datetime
 import time
 
-from src.models import Violation, ToolStatus
-from src.utils.logger import get_logger
+from wcag_backend.models_src import Violation, ToolStatus
+from wcag_backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 

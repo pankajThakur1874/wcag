@@ -1,31 +1,32 @@
 """Scanners for WCAG accessibility testing."""
 
-from src.scanners.base import BaseScanner
-from src.scanners.axe_scanner import AxeScanner
-from src.scanners.pa11y_scanner import Pa11yScanner
-from src.scanners.lighthouse_scanner import LighthouseScanner
-from src.scanners.html_validator import HTMLValidatorScanner
-from src.scanners.contrast_checker import ContrastChecker
-from src.scanners.keyboard_scanner import KeyboardScanner
-from src.scanners.aria_scanner import ARIAScanner
-from src.scanners.seo_scanner import SEOAccessibilityScanner
-from src.scanners.forms_scanner import FormsScanner
-from src.scanners.link_text_scanner import LinkTextScanner
-from src.scanners.image_alt_scanner import ImageAltScanner
-from src.scanners.media_scanner import MediaScanner
-from src.scanners.touch_target_scanner import TouchTargetScanner
-from src.scanners.readability_scanner import ReadabilityScanner
-from src.scanners.interactive_scanner import InteractiveScanner
+# Import from individual scanner modules
+from wcag_backend.scanners.base import BaseScanner
+from wcag_backend.scanners.axe_scanner import AxeScanner
+from wcag_backend.scanners.pa11y_scanner import Pa11yScanner
+from wcag_backend.scanners.lighthouse_scanner import LighthouseScanner
+from wcag_backend.scanners.html_validator import HTMLValidatorScanner
+from wcag_backend.scanners.contrast_checker import ContrastChecker
+from wcag_backend.scanners.keyboard_scanner import KeyboardScanner
+from wcag_backend.scanners.aria_scanner import ARIAScanner
+from wcag_backend.scanners.seo_scanner import SEOAccessibilityScanner
+from wcag_backend.scanners.forms_scanner import FormsScanner
+from wcag_backend.scanners.link_text_scanner import LinkTextScanner
+from wcag_backend.scanners.image_alt_scanner import ImageAltScanner
+from wcag_backend.scanners.media_scanner import MediaScanner
+from wcag_backend.scanners.touch_target_scanner import TouchTargetScanner
+from wcag_backend.scanners.readability_scanner import ReadabilityScanner
+from wcag_backend.scanners.interactive_scanner import InteractiveScanner
 
 # New custom WCAG 2.2 scanners
-from src.scanners.color_only_scanner import ColorOnlyScanner
-from src.scanners.hover_content_scanner import HoverContentScanner
-from src.scanners.multiple_ways_scanner import MultipleWaysScanner
-from src.scanners.pointer_gestures_scanner import PointerGesturesScanner
-from src.scanners.consistent_navigation_scanner import ConsistentNavigationScanner
-from src.scanners.character_shortcuts_scanner import CharacterShortcutsScanner
-from src.scanners.focus_obscured_scanner import FocusObscuredScanner
-from src.scanners.media_accessibility_scanner import MediaAccessibilityScanner
+from wcag_backend.scanners.color_only_scanner import ColorOnlyScanner
+from wcag_backend.scanners.hover_content_scanner import HoverContentScanner
+from wcag_backend.scanners.multiple_ways_scanner import MultipleWaysScanner
+from wcag_backend.scanners.pointer_gestures_scanner import PointerGesturesScanner
+from wcag_backend.scanners.consistent_navigation_scanner import ConsistentNavigationScanner
+from wcag_backend.scanners.character_shortcuts_scanner import CharacterShortcutsScanner
+from wcag_backend.scanners.focus_obscured_scanner import FocusObscuredScanner
+from wcag_backend.scanners.media_accessibility_scanner import MediaAccessibilityScanner
 
 __all__ = [
     "BaseScanner",

@@ -7,10 +7,10 @@ the three requirements: dismissible, hoverable, and persistent.
 from typing import Optional, List, Dict, Any
 from playwright.async_api import Page
 
-from src.scanners.base import BaseScanner
-from src.models import Violation, ViolationInstance, Impact, WCAGLevel
-from src.utils.browser import BrowserManager
-from src.utils.logger import get_logger
+from wcag_backend.scanners.base import BaseScanner
+from wcag_backend.models_src import Violation, ViolationInstance, Impact, WCAGLevel
+from wcag_backend.utils_src.browser import BrowserManager
+from wcag_backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 

@@ -209,3 +209,13 @@ def set_config(config: Config) -> None:
     """
     global _config
     _config = config
+
+
+def get_project_root() -> Path:
+    """Get the project root directory."""
+    return Path(__file__).parent.parent.parent
+
+
+def get_templates_dir() -> Path:
+    """Get the templates directory."""
+    return get_project_root() / "wcag_backend" / "templates"

@@ -13,9 +13,9 @@ import asyncio
 from typing import Optional, List, Dict, Any
 from playwright.async_api import Page, ElementHandle
 
-from src.scanners.base import BaseScanner
-from src.models import Violation, Impact, WCAGLevel, ViolationInstance
-from src.utils.logger import get_logger
+from wcag_backend.scanners.base import BaseScanner
+from wcag_backend.models_src import Violation, Impact, WCAGLevel, ViolationInstance
+from wcag_backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
