@@ -42,10 +42,10 @@ class Pa11yScanner(BaseScanner):
             process = await asyncio.create_subprocess_exec(
                 self._pa11y_path,
                 url,
-                "--reporter", "json",
-                "--standard", "WCAG2AA",
-                "--timeout", "60000",
-                "--chromium-args", "--no-sandbox --disable-setuid-sandbox --headless --disable-gpu",
+                "--reporter=json",
+                "--standard=WCAG2AA",
+                "--timeout=60000",
+                "--chromium-args=--headless=new --no-sandbox --disable-setuid-sandbox --disable-gpu --disable-dev-shm-usage",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )

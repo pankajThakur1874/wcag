@@ -89,14 +89,14 @@ class LighthouseScanner(BaseScanner):
             with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
                 output_path = tmp.name
 
-            # Run lighthouse
+            # Run lighthouse with headless Chrome
             process = await asyncio.create_subprocess_exec(
                 self._lighthouse_path,
                 url,
-                "--output", "json",
-                "--output-path", output_path,
-                "--only-categories", "accessibility",
-                "--chrome-flags", "--headless --no-sandbox --disable-gpu",
+                "--output=json",
+                "--output-path=" + output_path,
+                "--only-categories=accessibility",
+                "--chrome-flags=--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage",
                 "--quiet",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
