@@ -204,12 +204,12 @@ export interface ApiResponse<T> {
 
 export interface PaginatedResponse<T> {
   success: boolean;
-  data: {
-    items: T[];
-    total: number;
+  data: T[];
+  pagination: {
     page: number;
     limit: number;
     totalPages: number;
+    totalItems: number;
   };
 }
 

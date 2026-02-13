@@ -73,7 +73,8 @@ async def list_reports(
             "score": scan.get("score"),
             "issuesCount": scan.get("issuesCount", 0),
             "status": scan["status"],
-            "createdAt": scan["createdAt"]
+            "createdAt": scan["createdAt"],
+            "completedAt": scan.get("completedAt")  # Fixed: use camelCase
         })
 
     # Calculate pagination

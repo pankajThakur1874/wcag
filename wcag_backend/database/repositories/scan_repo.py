@@ -107,6 +107,9 @@ class ScanRepository:
         if status == "scanning" and not error:
             update_data["started_at"] = datetime.utcnow()
 
+        if status == "completed":
+            update_data["completed_at"] = datetime.utcnow()
+
         if error:
             update_data["error"] = error
 
@@ -218,7 +221,8 @@ class ScanRepository:
                 "score": scan.get("score"),
                 "issuesCount": scan.get("issues_count", 0),
                 "duration": scan.get("duration"),
-                "createdAt": scan["created_at"]
+                "createdAt": scan["created_at"],
+                "completedAt": scan.get("completed_at")
             })
 
         return enriched_scans, total_count

@@ -20,5 +20,11 @@ class ReportListItemResponse(BaseModel):
     issuesCount: int = Field(..., alias="issuesCount")
     status: str
     createdAt: datetime = Field(..., alias="createdAt")
+    completedAt: Optional[datetime] = Field(None, alias="completedAt")
 
-    model_config = {"populate_by_name": True}
+    model_config = {
+        "populate_by_name": True,
+        "json_encoders": {
+            datetime: lambda v: v.isoformat() if v else None
+        }
+    }

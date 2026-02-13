@@ -3,64 +3,252 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { useToast } from '@/lib/toast-context';
+import { SkeletonProjectCard } from '@/components/Skeleton';
+import { Pagination } from '@/components/Pagination';
 import type { Project } from '@/lib/types';
 
 // Available scanners with descriptions (matching backend SCANNERS registry)
 const AVAILABLE_SCANNERS = [
-    // Core scanners (recommended for comprehensive testing)
-    { id: 'axe', name: 'Axe Core', description: 'Industry-standard accessibility testing', recommended: true },
-    { id: 'pa11y', name: 'Pa11y', description: 'Automated accessibility testing tool', recommended: true },
-    { id: 'html_validator', name: 'HTML Validator', description: 'HTML/WCAG compliance checker', recommended: true },
+    // ===== CORE SCANNERS (Recommended for all scans) =====
+    {
+        id: 'axe',
+        name: 'Axe Core',
+        description: 'Industry-standard automated accessibility testing engine',
+        category: 'Core',
+        recommended: true,
+        wcag: 'WCAG 2.0, 2.1, 2.2'
+    },
+    {
+        id: 'pa11y',
+        name: 'Pa11y',
+        description: 'Automated accessibility testing using HTML_CodeSniffer',
+        category: 'Core',
+        recommended: true,
+        wcag: 'WCAG 2.0, 2.1'
+    },
+    {
+        id: 'html_validator',
+        name: 'HTML Validator',
+        description: 'W3C HTML validation and WCAG compliance checker',
+        category: 'Core',
+        recommended: true,
+        wcag: 'HTML5, WCAG 2.1'
+    },
 
-    // Additional scanners
-    { id: 'contrast', name: 'Contrast Checker', description: 'Color contrast validation', recommended: false },
-    { id: 'keyboard', name: 'Keyboard Scanner', description: 'Keyboard navigation testing', recommended: false },
-    { id: 'aria', name: 'ARIA Scanner', description: 'ARIA attributes validation', recommended: false },
-    { id: 'forms', name: 'Forms Scanner', description: 'Form accessibility checks', recommended: false },
-    { id: 'lighthouse', name: 'Lighthouse', description: 'Google\'s web quality tool', recommended: false },
-    { id: 'image_alt', name: 'Image Alt Text', description: 'Image alternative text validation', recommended: false },
-    { id: 'link_text', name: 'Link Text', description: 'Meaningful link text checker', recommended: false },
-    { id: 'readability', name: 'Readability', description: 'Content readability analysis', recommended: false },
-    { id: 'media', name: 'Media Scanner', description: 'Audio/video accessibility', recommended: false },
+    // ===== ESSENTIAL SCANNERS (High impact) =====
+    {
+        id: 'contrast',
+        name: 'Contrast Checker',
+        description: 'Color contrast ratio validation (WCAG 1.4.3, 1.4.6)',
+        category: 'Essential',
+        recommended: true,
+        wcag: '1.4.3 (AA), 1.4.6 (AAA)'
+    },
+    {
+        id: 'keyboard',
+        name: 'Keyboard Navigation',
+        description: 'Keyboard accessibility and focus management',
+        category: 'Essential',
+        recommended: true,
+        wcag: '2.1.1, 2.1.2, 2.4.7'
+    },
+    {
+        id: 'aria',
+        name: 'ARIA Validator',
+        description: 'ARIA roles, states, and properties validation',
+        category: 'Essential',
+        recommended: true,
+        wcag: '4.1.2 (Name, Role, Value)'
+    },
+    {
+        id: 'forms',
+        name: 'Forms Accessibility',
+        description: 'Form labels, error messages, and input validation',
+        category: 'Essential',
+        recommended: true,
+        wcag: '3.3.1, 3.3.2, 4.1.3'
+    },
 
-    // WCAG 2.2 Advanced scanners
-    { id: 'focus_obscured', name: 'Focus Visible (2.4.12)', description: 'WCAG 2.2 Level AA - Focus not obscured', recommended: false },
-    { id: 'hover_content', name: 'Hover Content (1.4.13)', description: 'WCAG 2.2 Level AA - Dismissible hover content', recommended: false },
-    { id: 'pointer_gestures', name: 'Pointer Gestures (2.5.7)', description: 'WCAG 2.2 Level A - Dragging movements', recommended: false },
+    // ===== CONTENT SCANNERS =====
+    {
+        id: 'image_alt',
+        name: 'Image Alt Text',
+        description: 'Alternative text validation for images',
+        category: 'Content',
+        recommended: false,
+        wcag: '1.1.1 (Non-text Content)'
+    },
+    {
+        id: 'link_text',
+        name: 'Link Text',
+        description: 'Meaningful and descriptive link text checker',
+        category: 'Content',
+        recommended: false,
+        wcag: '2.4.4 (Link Purpose)'
+    },
+    {
+        id: 'readability',
+        name: 'Readability',
+        description: 'Content readability and reading level analysis',
+        category: 'Content',
+        recommended: false,
+        wcag: '3.1.5 (Reading Level)'
+    },
+    {
+        id: 'media',
+        name: 'Media Accessibility',
+        description: 'Audio/video captions, transcripts, and controls',
+        category: 'Content',
+        recommended: false,
+        wcag: '1.2.1, 1.2.2, 1.2.3'
+    },
+
+    // ===== MOBILE & TOUCH =====
+    {
+        id: 'touch_target',
+        name: 'Touch Target Size',
+        description: 'Minimum touch target sizes for mobile (WCAG 2.5.5)',
+        category: 'Mobile',
+        recommended: false,
+        wcag: '2.5.5 (Target Size)'
+    },
+    {
+        id: 'pointer_gestures',
+        name: 'Pointer Gestures',
+        description: 'Single pointer and dragging alternatives (WCAG 2.2 - 2.5.7)',
+        category: 'Mobile',
+        recommended: false,
+        wcag: '2.5.7 (Dragging Movements)'
+    },
+
+    // ===== WCAG 2.2 NEW CRITERIA =====
+    {
+        id: 'focus_obscured',
+        name: 'Focus Not Obscured',
+        description: 'Ensure focused elements are not hidden (WCAG 2.2 - 2.4.11, 2.4.12)',
+        category: 'WCAG 2.2',
+        recommended: false,
+        wcag: '2.4.11 (Min), 2.4.12 (Enhanced)'
+    },
+    {
+        id: 'hover_content',
+        name: 'Hover/Focus Content',
+        description: 'Dismissible and hoverable tooltip content (WCAG 2.2 - 1.4.13)',
+        category: 'WCAG 2.2',
+        recommended: false,
+        wcag: '1.4.13 (Content on Hover/Focus)'
+    },
+    {
+        id: 'character_shortcuts',
+        name: 'Character Key Shortcuts',
+        description: 'Single character keyboard shortcuts (WCAG 2.1 - 2.1.4)',
+        category: 'WCAG 2.2',
+        recommended: false,
+        wcag: '2.1.4 (Character Key Shortcuts)'
+    },
+
+    // ===== NAVIGATION & STRUCTURE =====
+    {
+        id: 'consistent_navigation',
+        name: 'Consistent Navigation',
+        description: 'Navigation consistency across pages (WCAG 3.2.3)',
+        category: 'Navigation',
+        recommended: false,
+        wcag: '3.2.3 (Consistent Navigation)'
+    },
+    {
+        id: 'multiple_ways',
+        name: 'Multiple Ways',
+        description: 'Multiple ways to find pages (WCAG 2.4.5)',
+        category: 'Navigation',
+        recommended: false,
+        wcag: '2.4.5 (Multiple Ways)'
+    },
+    {
+        id: 'interactive',
+        name: 'Interactive Elements',
+        description: 'Buttons, dropdowns, modals, and widget patterns',
+        category: 'Navigation',
+        recommended: false,
+        wcag: 'Multiple criteria'
+    },
+
+    // ===== ADVANCED =====
+    {
+        id: 'lighthouse',
+        name: 'Lighthouse',
+        description: 'Google\'s comprehensive web quality audits',
+        category: 'Advanced',
+        recommended: false,
+        wcag: 'Performance + Accessibility'
+    },
+    {
+        id: 'seo',
+        name: 'SEO Accessibility',
+        description: 'SEO best practices that improve accessibility',
+        category: 'Advanced',
+        recommended: false,
+        wcag: 'Semantic HTML + SEO'
+    },
+    {
+        id: 'color_only',
+        name: 'Color Only Information',
+        description: 'Detect information conveyed by color alone (WCAG 1.4.1)',
+        category: 'Advanced',
+        recommended: false,
+        wcag: '1.4.1 (Use of Color)'
+    },
+    {
+        id: 'media_accessibility',
+        name: 'Advanced Media',
+        description: 'Extended media accessibility checks including sign language',
+        category: 'Advanced',
+        recommended: false,
+        wcag: '1.2.6 (Sign Language)'
+    },
 ];
 
 export default function ProjectsPage() {
     const router = useRouter();
+    const toast = useToast();
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [creating, setCreating] = useState(false);
     const [showScannerModal, setShowScannerModal] = useState(false);
     const [selectedProject, setSelectedProject] = useState<string | null>(null);
-    const [selectedScanners, setSelectedScanners] = useState<string[]>(['axe', 'pa11y', 'html_validator']);
+    const [selectedScanners, setSelectedScanners] = useState<string[]>(['axe', 'pa11y', 'html_validator', 'contrast', 'keyboard', 'aria', 'forms']);
     const [scanning, setScanning] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const itemsPerPage = 12;
 
     useEffect(() => {
         loadProjects();
     }, []);
 
-    const loadProjects = async () => {
+    const loadProjects = async (page: number = currentPage) => {
+        setLoading(true);
         try {
-            const response = await api.getProjects({ limit: 100 });
-            // Handle both paginated ({items: [...]}) and direct array responses
-            const data = response.data;
-            if (Array.isArray(data)) {
-                setProjects(data);
-            } else if (data?.items && Array.isArray(data.items)) {
-                setProjects(data.items);
-            } else {
-                setProjects([]);
+            const response = await api.getProjects({ page, limit: itemsPerPage });
+            setProjects(response.data);
+            if (response.pagination) {
+                setTotalPages(response.pagination.totalPages);
+                setTotalItems(response.pagination.totalItems);
+                setCurrentPage(page);
             }
         } catch (error) {
             console.error('Failed to load projects:', error);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePageChange = (page: number) => {
+        loadProjects(page);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleCreateProject = async (e: React.FormEvent) => {
@@ -78,9 +266,11 @@ export default function ProjectsPage() {
             await api.createProject(data);
             setShowCreateModal(false);
             await loadProjects();
-        } catch (error) {
+            toast.success(`Project "${data.name}" created successfully!`);
+        } catch (error: any) {
             console.error('Failed to create project:', error);
-            alert('Failed to create project');
+            const errorMessage = error.response?.data?.error?.message || 'Failed to create project';
+            toast.error(errorMessage);
         } finally {
             setCreating(false);
         }
@@ -93,7 +283,7 @@ export default function ProjectsPage() {
 
     const handleStartScan = async () => {
         if (!selectedProject || selectedScanners.length === 0) {
-            alert('Please select at least one scanner');
+            toast.warning('Please select at least one scanner');
             return;
         }
 
@@ -104,10 +294,12 @@ export default function ProjectsPage() {
                 scanners: selectedScanners
             });
             setShowScannerModal(false);
+            toast.success('Scan started successfully!');
             router.push(`/scan?scanId=${response.data.scanId}`);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to start scan:', error);
-            alert('Failed to start scan');
+            const errorMessage = error.response?.data?.error?.message || 'Failed to start scan';
+            toast.error(errorMessage);
         } finally {
             setScanning(false);
         }
@@ -131,7 +323,21 @@ export default function ProjectsPage() {
     };
 
     if (loading) {
-        return <div>Loading...</div>;
+        return (
+            <>
+                <header className="section-header">
+                    <div>
+                        <h1 className="section-title">Projects</h1>
+                        <p className="section-subtitle">Manage your websites and scan configurations.</p>
+                    </div>
+                </header>
+                <div className="projects-grid">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <SkeletonProjectCard key={i} />
+                    ))}
+                </div>
+            </>
+        );
     }
 
     return (
@@ -177,13 +383,28 @@ export default function ProjectsPage() {
                                 >
                                     Scan Now
                                 </button>
-                                <button style={{ padding: '0.5rem 1rem', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', background: 'white', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8rem' }}>
+                                <button
+                                    onClick={() => router.push(`/projects/${project.id}`)}
+                                    style={{ padding: '0.5rem 1rem', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', background: 'white', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8rem' }}
+                                >
                                     Settings
                                 </button>
                             </div>
                         </div>
                     ))}
                 </div>
+            )}
+
+            {/* Pagination */}
+            {!loading && projects.length > 0 && (
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={handlePageChange}
+                    loading={loading}
+                />
             )}
 
             {/* Create Project Modal */}
@@ -277,45 +498,60 @@ export default function ProjectsPage() {
                             </button>
                         </div>
 
-                        {/* Scanner List */}
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            {AVAILABLE_SCANNERS.map((scanner) => (
-                                <div
-                                    key={scanner.id}
-                                    onClick={() => toggleScanner(scanner.id)}
-                                    style={{
-                                        padding: '1rem',
-                                        border: `2px solid ${selectedScanners.includes(scanner.id) ? 'var(--primary-start)' : 'var(--border-light)'}`,
-                                        borderRadius: 'var(--radius-md)',
-                                        marginBottom: '0.75rem',
-                                        cursor: 'pointer',
-                                        background: selectedScanners.includes(scanner.id) ? 'rgba(79, 70, 229, 0.05)' : 'white',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'start', gap: '0.75rem' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedScanners.includes(scanner.id)}
-                                            onChange={() => {}}
-                                            style={{ marginTop: '0.25rem', cursor: 'pointer' }}
-                                        />
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                                                <strong style={{ fontSize: '0.95rem' }}>{scanner.name}</strong>
-                                                {scanner.recommended && (
-                                                    <span style={{ fontSize: '0.75rem', background: 'var(--grad-success)', color: 'white', padding: '0.125rem 0.5rem', borderRadius: '0.25rem' }}>
-                                                        Recommended
-                                                    </span>
-                                                )}
+                        {/* Scanner List - Grouped by Category */}
+                        <div style={{ marginBottom: '1.5rem', maxHeight: '500px', overflowY: 'auto' }}>
+                            {['Core', 'Essential', 'Content', 'Mobile', 'WCAG 2.2', 'Navigation', 'Advanced'].map((category) => {
+                                const categoryScannners = AVAILABLE_SCANNERS.filter(s => s.category === category);
+                                if (categoryScannners.length === 0) return null;
+
+                                return (
+                                    <div key={category} style={{ marginBottom: '1.5rem' }}>
+                                        <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            {category}
+                                        </h4>
+                                        {categoryScannners.map((scanner) => (
+                                            <div
+                                                key={scanner.id}
+                                                onClick={() => toggleScanner(scanner.id)}
+                                                style={{
+                                                    padding: '0.875rem',
+                                                    border: `2px solid ${selectedScanners.includes(scanner.id) ? 'var(--primary-start)' : 'var(--border-light)'}`,
+                                                    borderRadius: 'var(--radius-md)',
+                                                    marginBottom: '0.5rem',
+                                                    cursor: 'pointer',
+                                                    background: selectedScanners.includes(scanner.id) ? 'rgba(79, 70, 229, 0.05)' : 'white',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'start', gap: '0.75rem' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedScanners.includes(scanner.id)}
+                                                        onChange={() => {}}
+                                                        style={{ marginTop: '0.25rem', cursor: 'pointer' }}
+                                                    />
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
+                                                            <strong style={{ fontSize: '0.9rem' }}>{scanner.name}</strong>
+                                                            {scanner.recommended && (
+                                                                <span style={{ fontSize: '0.7rem', background: 'var(--grad-success)', color: 'white', padding: '0.125rem 0.4rem', borderRadius: '0.25rem' }}>
+                                                                    Recommended
+                                                                </span>
+                                                            )}
+                                                            <span style={{ fontSize: '0.7rem', background: '#e0e7ff', color: '#4c1d95', padding: '0.125rem 0.4rem', borderRadius: '0.25rem' }}>
+                                                                {scanner.wcag}
+                                                            </span>
+                                                        </div>
+                                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: 0 }}>
+                                                            {scanner.description}
+                                                        </p>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
-                                                {scanner.description}
-                                            </p>
-                                        </div>
+                                        ))}
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
                         {/* Selected Count */}

@@ -19,7 +19,7 @@ class IssuesByImpactResponse(BaseModel):
 class DashboardStatsResponse(BaseModel):
     """Dashboard statistics response."""
 
-    totalScans: int = Field(..., alias="totalScans")
+    completedScans: int = Field(..., alias="completedScans")
     activeProjects: int = Field(..., alias="activeProjects")
     criticalIssues: int = Field(..., alias="criticalIssues")
     avgScore: int = Field(..., alias="avgScore")

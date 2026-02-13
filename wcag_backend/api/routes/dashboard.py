@@ -53,8 +53,8 @@ async def get_dashboard_stats(
     - Average scan score
     - Issues grouped by impact level
     """
-    # Get total scans (completed only)
-    total_scans = await scan_repo.count_by_user(
+    # Get completed scans count
+    completed_scans = await scan_repo.count_by_user(
         user_id=current_user.id,
         status="completed"
     )
@@ -80,7 +80,7 @@ async def get_dashboard_stats(
 
     # Build response
     stats = DashboardStatsResponse(
-        totalScans=total_scans,
+        completedScans=completed_scans,
         activeProjects=active_projects,
         criticalIssues=critical_issues,
         avgScore=avg_score,

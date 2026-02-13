@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { SkeletonStats, SkeletonCard, SkeletonTable } from '@/components/Skeleton';
 import type { DashboardStats, DashboardPage } from '@/lib/types';
 
 export default function Dashboard() {
@@ -17,15 +18,7 @@ export default function Dashboard() {
           api.getDashboardPages({ limit: 10 })
         ]);
         setStats(statsRes.data);
-        // Handle both paginated ({items: [...]}) and direct array responses
-        const pagesData = pagesRes.data;
-        if (Array.isArray(pagesData)) {
-          setPages(pagesData);
-        } else if (pagesData?.items && Array.isArray(pagesData.items)) {
-          setPages(pagesData.items);
-        } else {
-          setPages([]);
-        }
+        setPages(pagesRes.data);
       } catch (error) {
         console.error('Failed to load dashboard:', error);
       } finally {
@@ -37,7 +30,23 @@ export default function Dashboard() {
   }, []);
 
   if (loading || !stats) {
-    return <div>Loading...</div>;
+    return (
+      <>
+        <header className="section-header">
+          <h1 className="section-title">Dashboard</h1>
+          <p className="section-subtitle">Overview of your accessibility compliance status.</p>
+        </header>
+
+        <SkeletonStats />
+
+        <div className="charts-row">
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+
+        <SkeletonTable rows={5} columns={6} />
+      </>
+    );
   }
 
   const score = Math.round(stats.avgScore || 0);

@@ -78,6 +78,8 @@ class ApiClient {
   private client: AxiosInstance;
   private isRefreshing = false;
   private refreshSubscribers: ((token: string) => void)[] = [];
+  private maxRetries = 3;
+  private retryDelay = 1000; // ms
 
   constructor() {
     this.client = axios.create({
@@ -99,11 +101,26 @@ class ApiClient {
       (error) => Promise.reject(error)
     );
 
-    // Response interceptor - handle token refresh
+    // Response interceptor - handle token refresh and retries
     this.client.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
         const originalRequest = error.config as any;
+
+        // Handle network errors with retry logic
+        if (!error.response && !originalRequest._retryCount) {
+          originalRequest._retryCount = 0;
+        }
+
+        if (!error.response && originalRequest._retryCount < this.maxRetries) {
+          originalRequest._retryCount += 1;
+
+          // Exponential backoff
+          const delay = this.retryDelay * Math.pow(2, originalRequest._retryCount - 1);
+          await new Promise(resolve => setTimeout(resolve, delay));
+
+          return this.client(originalRequest);
+        }
 
         // If token expired, try to refresh
         if (error.response?.status === 401 && !originalRequest._retry) {
